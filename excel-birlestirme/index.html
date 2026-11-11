@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>Excel Birleştirme</title>
+<style>
+  :root {
+    --zemin: #f3f5f8; --kart: #ffffff; --cizgi: #dce2ea; --yazi: #1c2433; --soluk: #5a6578;
+    --vurgu: #1f4e79; --vurgu-koyu: #173b5c; --vurgu-acik: #e7eff8;
+    --iyi: #1d7246; --iyi-acik: #e5f3eb; --uyari: #8a5a00; --uyari-acik: #fdf2dc; --hata: #b3261e; --hata-acik: #fbe8e6;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--zemin); color: var(--yazi); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  .kap { max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+  header.ust { background: var(--vurgu); color: #fff; padding: 22px 0 20px; }
+  header.ust h1 { margin: 0 0 4px; font-size: 23px; letter-spacing: .2px; }
+  header.ust p { margin: 0; opacity: .92; max-width: 760px; }
+  header.ust a.geri { display: inline-block; margin-bottom: 8px; color: #fff; opacity: .85; font-size: 13px; text-decoration: none; }
+  header.ust a.geri:hover, header.ust a.geri:focus-visible { opacity: 1; text-decoration: underline; }
+  .gizlilik { display: inline-block; margin-top: 10px; padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,.14); font-size: 13px; }
+  main { padding: 6px 16px 30px; }
+  .adim { background: var(--kart); border: 1px solid var(--cizgi); border-radius: 10px; padding: 18px 20px; margin: 16px 0; }
+  .adim-baslik { display: flex; align-items: center; gap: 10px; }
+  .adim-baslik h2 { font-size: 17px; margin: 0; }
+  .no { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--vurgu); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; }
+  .ipucu { color: var(--soluk); margin: 6px 0 12px; }
+  .soluk { color: var(--soluk); }
+  .birak { position: relative; display: block; border: 2px dashed #b6c2d1; border-radius: 9px; padding: 20px 16px; text-align: center; color: var(--soluk); cursor: pointer; background: #fafbfd; transition: background .15s, border-color .15s; }
+  .birak:hover, .birak.ustunde { border-color: var(--vurgu); background: var(--vurgu-acik); color: var(--vurgu); }
+  .birak:focus-within { outline: 3px solid #9cc0e6; outline-offset: 2px; }
+  .birak input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+  .birak strong { color: var(--vurgu); }
+  .durum { min-height: 0; margin: 8px 0 0; font-size: 14px; }
+  .durum:empty { display: none; }
+  .durum.bilgi { color: var(--vurgu); }
+  .durum.iyi { color: var(--iyi); }
+  .durum.uyari { color: var(--uyari); }
+  .durum.hata { color: var(--hata); font-weight: 600; }
+  button { font: inherit; border-radius: 7px; border: 1px solid #c3ccd8; background: #fff; color: var(--yazi); padding: 8px 16px; cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--vurgu); }
+  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 3px solid #9cc0e6; outline-offset: 1px; }
+  button.ana-dugme { background: var(--vurgu); border-color: var(--vurgu); color: #fff; font-weight: 600; }
+  button.ana-dugme:hover:not(:disabled) { background: var(--vurgu-koyu); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.kaldir { padding: 2px 9px; line-height: 1.4; color: var(--soluk); }
+  .dugmeler { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .ozet p { margin: 10px 0 6px; }
+  .dosya-kart { border: 1px solid var(--cizgi); border-radius: 9px; margin: 10px 0; overflow: hidden; }
+  .dosya-ust { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 12px; background: #f7f9fc; border-bottom: 1px solid var(--cizgi); }
+  .dosya-ust strong { word-break: break-word; }
+  .dosya-ust .kaldir { margin-left: auto; }
+  .sira { flex: none; min-width: 22px; height: 22px; border-radius: 11px; background: #dfe7f1; color: var(--vurgu); font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; padding: 0 6px; }
+  .sayfa-satiri { padding: 10px 12px; border-top: 1px solid #edf0f4; }
+  .sayfa-satiri:first-of-type { border-top: 0; }
+  .sayfa-ust { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+  .sayfa-sec { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; word-break: break-word; }
+  .sayfa-sec input { width: 17px; height: 17px; accent-color: var(--vurgu); }
+  .rozet { display: inline-block; padding: 1px 9px; border-radius: 10px; font-size: 12.5px; background: var(--vurgu-acik); color: var(--vurgu); white-space: nowrap; }
+  .rozet.banka { background: #e6f2ee; color: #17614a; }
+  .rozet.tebligat { background: #f1eafa; color: #5b3a8a; }
+  .rozet.genel { background: var(--vurgu-acik); color: var(--vurgu); }
+  .rozet.taninmadi { background: #eef0f3; color: var(--soluk); }
+  .esler { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .es { font-size: 12.5px; padding: 2px 8px; border-radius: 6px; background: #f2f4f7; border: 1px solid #e3e7ed; }
+  .not { margin: 8px 0 0; padding: 7px 10px; border-radius: 7px; background: var(--uyari-acik); color: #5d4200; font-size: 13.5px; }
+  .hata-metni { margin: 0; padding: 10px 12px; color: var(--hata); background: var(--hata-acik); }
+  .kartlar { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 10px 0 6px; }
+  .sayi-kart { border: 1px solid var(--cizgi); border-radius: 9px; padding: 10px 12px; background: #fbfcfe; }
+  .sayi-kart b { display: block; font-size: 24px; line-height: 1.2; }
+  .sayi-kart span { color: var(--soluk); font-size: 13px; }
+  .sayi-kart.iyi-kart { border-color: #bfe0cc; background: var(--iyi-acik); }
+  .sayi-kart.uyari-kart { border-color: #f0d79c; background: var(--uyari-acik); }
+  #rapor h3 { font-size: 16px; margin: 18px 0 6px; }
+  .ozet-kart { border: 1px solid var(--cizgi); border-radius: 9px; padding: 12px 14px; margin: 12px 0; }
+  .ozet-kart > header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .ozet-kart h4 { margin: 0; font-size: 15px; word-break: break-word; }
+  .ozet-kart .ayrac { color: var(--soluk); font-weight: 400; }
+  .bolum { margin-top: 10px; }
+  .bolum h5 { margin: 0 0 4px; font-size: 13px; text-transform: none; color: var(--soluk); font-weight: 600; }
+  .bolum ul { margin: 0; padding-left: 20px; }
+  .bolum p { margin: 0; }
+  .tablo-kap { overflow-x: auto; border: 1px solid var(--cizgi); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 9px; border-bottom: 1px solid #e8ecf1; vertical-align: top; }
+  th { background: #f4f7fb; font-weight: 600; white-space: nowrap; }
+  tr.atlandi td { color: var(--uyari); }
+  .detay input[type=search] { width: 100%; max-width: 420px; margin: 6px 0; }
+  input[type=text], input[type=search], select, textarea { font: inherit; padding: 7px 9px; border: 1px solid #c3ccd8; border-radius: 7px; background: #fff; color: var(--yazi); width: 100%; }
+  textarea { resize: vertical; }
+  details.adim > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 17px; }
+  details.adim > summary::-webkit-details-marker { display: none; }
+  details.adim > summary::after { content: "+"; margin-left: auto; color: var(--soluk); font-weight: 400; font-size: 20px; }
+  details.adim[open] > summary::after { content: "−"; }
+  .form-izgara { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; margin: 10px 0; }
+  .form-izgara label { display: block; font-size: 13.5px; color: var(--soluk); }
+  .form-izgara label > * { margin-top: 3px; }
+  .form-izgara .genis { grid-column: 1 / -1; }
+  .ayar-tablo td { padding: 4px 6px 4px 0; border: 0; }
+  .ayar-tablo th { background: none; padding: 4px 6px 4px 0; border: 0; color: var(--soluk); font-weight: 600; }
+  .ayar-tablo td:last-child { width: 40px; }
+  #not-liste { margin: 10px 0 0; padding-left: 20px; }
+  #not-liste li { margin: 4px 0; }
+  footer.alt { color: var(--soluk); font-size: 13px; padding: 0 16px 28px; }
+  @media (max-width: 640px) {
+    .adim { padding: 14px; }
+    .form-izgara { grid-template-columns: 1fr; }
+    header.ust h1 { font-size: 20px; }
+    .dosya-ust .kaldir { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+<header class="ust">
+  <div class="kap">
+    <a class="geri" href="../">← Tüm projeler</a>
+    <h1>Excel Birleştirme</h1>
+    <p>Gelen Excel'leri ana tabloya kurum kurum yerleştirir. Her satır bir dosyadaki bir borçludur; gelen her Excel kendi bilgisini o satırın ilgili sütununa yazar.</p>
+    <span class="gizlilik">Dosyalar bilgisayarınızdan çıkmaz: tüm işlem bu sayfada, tarayıcıda yapılır.</span>
+  </div>
+</header>
+
+<main class="kap">
+  <section class="adim" aria-labelledby="b-ana">
+    <div class="adim-baslik"><span class="no">1</span><h2 id="b-ana">Ana Excel</h2></div>
+    <p class="ipucu">Daha önce bu sayfadan indirdiğiniz ana Excel'i seçin. İlk kullanımda boş bırakın; birleştirince yeni bir ana tablo oluşur.</p>
+    <label class="birak" id="ana-birak">
+      <input type="file" id="ana-girdi" accept=".xlsx,.xlsm">
+      <span><strong>Ana Excel'i seçin</strong> ya da buraya sürükleyin</span>
+    </label>
+    <p class="durum" id="ana-durum" role="status"></p>
+    <p class="not" id="kurum-uyari" hidden>Kurum listesi boş: satırlar kurumlara ayrılmaz, hepsi Diğer sayfasına gider. Kurum listesini içeren ana Excel'i seçin ya da sayfanın altındaki Ayarlar bölümünden kurum ekleyin.</p>
+    <div class="ozet" id="ana-ozet"></div>
+  </section>
+
+  <section class="adim" aria-labelledby="b-gelen">
+    <div class="adim-baslik"><span class="no">2</span><h2 id="b-gelen">Gelen Excel'ler</h2></div>
+    <p class="ipucu">WhatsApp'tan gelen dosyaları seçin; birden çok dosya seçilebilir. Dosyalar eskiden yeniye işlenir, aynı bilgi için yenisi geçerli olur. Her sayfanın yanındaki kutuyla o sayfayı dahil edip çıkarabilirsiniz.</p>
+    <label class="birak" id="gelen-birak">
+      <input type="file" id="gelen-girdi" accept=".xlsx,.xlsm,.xls,.csv,.txt,.htm,.html,.xml" multiple>
+      <span><strong>Dosyaları seçin</strong> ya da buraya sürükleyin</span>
+    </label>
+    <p class="durum" id="gelen-durum" role="status"></p>
+    <div id="gelen-liste"></div>
+  </section>
+
+  <section class="adim" aria-labelledby="b-birlestir">
+    <div class="adim-baslik"><span class="no">3</span><h2 id="b-birlestir">Birleştir ve indir</h2></div>
+    <p class="ipucu">Birleştir'e basınca neyin hangi sayfaya, hangi sütuna yazıldığı aşağıda listelenir. Sonucu beğenirseniz ana Excel'i indirin.</p>
+    <div class="dugmeler">
+      <button type="button" id="birlestir-dugme" class="ana-dugme" disabled>Birleştir</button>
+      <button type="button" id="indir-dugme" disabled>Ana Excel'i indir</button>
+      <button type="button" id="yeni-baslat">Baştan başla</button>
+    </div>
+    <p class="durum" id="birlestir-durum" role="status"></p>
+    <p class="durum" id="indir-durum" role="status"></p>
+    <div id="rapor" aria-live="polite"></div>
+  </section>
+
+  <details class="adim" id="notlar-bolum">
+    <summary>Notlar</summary>
+    <p class="ipucu">Excel'lerden bağımsız not. Eklenen notlar indirilen ana Excel'in "Notlar" sayfasına yazılır; notları Excel'de o sayfaya doğrudan da yazabilirsiniz.</p>
+    <div class="form-izgara">
+      <label>Kurum<select id="not-kurum"></select></label>
+      <label>İlgili kayıt<input type="text" id="not-kayit" placeholder="Ör. 2026/10101 ya da borçlu adı"></label>
+      <label class="genis">Not<textarea id="not-metin" rows="3"></textarea></label>
+      <label>Yazan<input type="text" id="not-yazan" placeholder="Adınız"></label>
+    </div>
+    <div class="dugmeler"><button type="button" id="not-ekle">Notu ekle</button></div>
+    <p class="durum" id="not-durum" role="status"></p>
+    <p class="soluk" id="not-sayac"></p>
+    <ul id="not-liste"></ul>
+  </details>
+
+  <details class="adim" id="ayarlar-bolum">
+    <summary>Ayarlar</summary>
+    <p class="ipucu">Ayarlar bu tarayıcıda ve indirilen ana Excel'in "Ayarlar" sayfasında saklanır; siteye ya da sunucuya gönderilmez. Ana Excel yüklendiğinde oradaki ayarlar kullanılır.</p>
+    <h3>Kurumlar</h3>
+    <p class="soluk">Satırın Alacaklı adında bu kelimelerden biri geçerse satır o kurumun sayfasına gider (kelime başından eşleşir: ÖRNEK, "Örnek Bankası A.Ş." ile eşleşir). Tanınmayanlar Diğer sayfasına gider.</p>
+    <div class="tablo-kap">
+      <table class="ayar-tablo">
+        <thead><tr><th>Kurum (sayfa adı)</th><th>Alacaklı adında geçenler (virgülle)</th><th></th></tr></thead>
+        <tbody id="kurum-satirlari"></tbody>
+      </table>
+    </div>
+    <div class="dugmeler" style="margin-top:8px"><button type="button" id="kurum-ekle">Kurum ekle</button></div>
+    <h3>Sütun eşleştirme</h3>
+    <p class="soluk">Gelen Excel'deki bir başlık tanınmadıysa (raporda "Kullanılmayan sütunlar" altında görünür) burada tablodaki bir sütuna bağlayın. Listede olmayan bir ad yazarsanız tabloya yeni sütun olarak eklenir.</p>
+    <div class="tablo-kap">
+      <table class="ayar-tablo">
+        <thead><tr><th>Gelen Excel'deki sütun adı</th><th>Tablodaki sütun</th><th></th></tr></thead>
+        <tbody id="es-satirlari"></tbody>
+      </table>
+    </div>
+    <datalist id="sutun-listesi"></datalist>
+    <div class="dugmeler" style="margin-top:8px">
+      <button type="button" id="es-ekle">Eşleştirme ekle</button>
+      <button type="button" id="ayar-kaydet" class="ana-dugme">Ayarları kaydet</button>
+      <button type="button" id="ayar-varsayilan">Varsayılana dön</button>
+    </div>
+    <p class="durum" id="ayar-durum" role="status"></p>
+  </details>
+</main>
+
+<footer class="kap alt">
+  <p>Ana tablo sütunları: Borçlu Adı, Borçlu TCKN / VKN, İcra Dairesi, Dosya No, Tebligat, Kesinleşme, Araç, Tapu, Alacaklı Olduğu Dosya, Maaş, Banka ve Firma sorgu ve hacizleri, Bankada para, Bankadan para istenmesi; sonra Föy No, Alacaklı, Son Güncelleme, Kaynak.</p>
+</footer>
+
+<script src="okuyucu.js"></script>
+<script src="yazici.js"></script>
+<script src="birlestirme.js"></script>
+<script src="arayuz.js"></script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>Otomasyon Projeleri</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f4e79'/%3E%3Cpath d='M9 10h14M9 16h14M9 22h9' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  :root { --zemin: #f3f5f8; --kart: #ffffff; --cizgi: #dce2ea; --yazi: #1c2433; --soluk: #5a6578; --vurgu: #1f4e79; --vurgu-koyu: #173b5c; --vurgu-acik: #e7eff8; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--zemin); color: var(--yazi); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  .kap { max-width: 1000px; margin: 0 auto; padding: 0 16px; }
+  header { background: var(--vurgu); color: #fff; padding: 34px 0 30px; }
+  .alan { margin: 0 0 6px; font-size: 13px; letter-spacing: .4px; opacity: .8; }
+  h1 { margin: 0 0 8px; font-size: 26px; }
+  header p:last-child { margin: 0; max-width: 680px; opacity: .92; }
+  main { padding-top: 26px; padding-bottom: 36px; }
+  h2 { margin: 0 0 12px; font-size: 15px; font-weight: 600; color: var(--soluk); }
+  .projeler { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin: 0; padding: 0; list-style: none; }
+  .proje { display: flex; flex-direction: column; gap: 10px; padding: 18px 18px 16px; background: var(--kart); border: 1px solid var(--cizgi); border-radius: 12px; }
+  .proje h3 { margin: 0; font-size: 18px; }
+  .proje p { margin: 0; color: var(--soluk); }
+  .etiketler { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+  .etiketler li { padding: 2px 9px; border-radius: 10px; background: var(--vurgu-acik); color: var(--vurgu); font-size: 12.5px; }
+  .alt-satir { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; padding-top: 4px; }
+  .tarih { font-size: 12.5px; color: var(--soluk); }
+  .ac { display: inline-block; padding: 8px 16px; border-radius: 8px; background: var(--vurgu); color: #fff; font-weight: 600; text-decoration: none; }
+  .ac:hover { background: var(--vurgu-koyu); }
+  .ac:focus-visible { outline: 3px solid #9cc0e6; outline-offset: 2px; }
+  footer { padding-bottom: 30px; color: var(--soluk); font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="kap">
+    <p class="alan">tahirdogan.info</p>
+    <h1>Otomasyon Projeleri</h1>
+    <p>Büro işleri için hazırlanmış küçük araçlar. Araçlar tarayıcıda çalışır; seçtiğiniz dosyalar bu sitenin sunucusuna gönderilmez.</p>
+  </div>
+</header>
+<main class="kap">
+  <h2>Projeler</h2>
+  <ul class="projeler">
+    <li class="proje">
+      <h3>Excel Birleştirme</h3>
+      <p>Banka cevapları, tebligat raporu ve sorgu listeleri gibi parça parça gelen Excel'leri tek ana Excel'de birleştirir: her kurum ayrı sayfada, her borçlu bir satırda. Neyin hangi sayfaya ve sütuna yazıldığını raporlar.</p>
+      <ul class="etiketler"><li>Excel</li><li>İcra takibi</li><li>Tarayıcıda çalışır</li></ul>
+      <div class="alt-satir">
+        <span class="tarih">Kasım 2026</span>
+        <a class="ac" href="excel-birlestirme/">Aracı aç</a>
+      </div>
+    </li>
+  </ul>
+</main>
+<footer class="kap">
+  <p>Yeni araçlar eklendikçe bu listede görünür.</p>
+</footer>
+</body>
+</html>
