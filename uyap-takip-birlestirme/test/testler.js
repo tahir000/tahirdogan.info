@@ -1,5 +1,5 @@
 /*
- * UYAP Takip XML Birleştirme testleri. test.html açılınca çalışır; sonuç sayfaya
+ * VakıfBank Takip XML Birleştirme testleri. test.html açılınca çalışır; sonuç sayfaya
  * ve sekme başlığına yazılır ("TEST 30/30").
  */
 (async function () {

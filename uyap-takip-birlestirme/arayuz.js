@@ -1,5 +1,5 @@
 /*
- * UYAP Takip XML Birleştirme: arayüz
+ * VakıfBank Takip XML Birleştirme: arayüz
  * Dosya içeriğindeki metinler sayfaya yalnızca textContent ile yazılır.
  */
 (function () {

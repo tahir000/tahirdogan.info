@@ -1,5 +1,5 @@
 /*
- * UYAP Takip XML Birleştirme: birleştirme mantığı
+ * VakıfBank Takip XML Birleştirme: birleştirme mantığı
  *
  * İcra programlarının (ör. Galle) ürettiği UYAP takip XML'lerini (exchangeData)
  * okur, borçlu adlarını bulur ve <dosya> bloklarını tek XML'de birleştirir.

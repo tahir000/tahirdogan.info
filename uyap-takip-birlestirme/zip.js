@@ -1,5 +1,5 @@
 /*
- * UYAP Takip XML Birleştirme: küçük zip yazıcı
+ * VakıfBank Takip XML Birleştirme: küçük zip yazıcı
  * Birleşik dosyayı ve borçlu adıyla adlandırılmış dosyaları tek .zip olarak indirmek için.
  * Türkçe dosya adları UTF-8 işaretiyle yazılır.
  */
