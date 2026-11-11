@@ -161,8 +161,8 @@
     eq(rb.ozetler[0].yeni, 3000, '3.000 satır işlendi');
     ok(sure < 5000, '3.000 satır 5 saniyeden kısa sürer (' + sure + ' ms, çıktı ' + Math.round(by.length / 1024) + ' KB)');
 
-    /* Denetim için çıktıyı yerel sunucuya kaydet (varsa) */
-    try {
+    /* Denetim için çıktıyı yerel test sunucusuna kaydet (yalnız yerel adreste; canlı sitede gönderilmez) */
+    if (['localhost', '127.0.0.1'].includes(location.hostname)) try {
       await fetch('/kaydet?ad=ornek-ana-excel.xlsx', { method: 'POST', body: son2 });
       await fetch('/kaydet?ad=ornek-banka-cevaplari.xlsx', { method: 'POST', body: await xlsx(X.bankaDosyasi()) });
       await fetch('/kaydet?ad=ornek-tebligat-raporu.xlsx', { method: 'POST', body: await xlsx(X.tebligatDosyasi()) });

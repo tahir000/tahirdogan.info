@@ -68,8 +68,8 @@
     const adUz = dv.getUint16(26, true);
     eq(new TextDecoder().decode(zip.subarray(30, 30 + adUz)), '2026-11-11 09.05 - 3 dosya/Toplu Takip - ÇAĞLA.xml', 'ZIP içinde Türkçe ad korunur');
 
-    /* Python scriptiyle karşılaştırma için örnekleri ve çıktıyı yerel test sunucusuna kaydet (varsa) */
-    try {
+    /* Python scriptiyle karşılaştırma için örnekleri ve çıktıyı yerel test sunucusuna kaydet (yalnız yerel adreste; canlı sitede gönderilmez) */
+    if (['localhost', '127.0.0.1'].includes(location.hostname)) try {
       for (const o of ornek) await fetch('/kaydet?ad=' + encodeURIComponent('uyap-ornek-' + o[0]), { method: 'POST', body: kodla.encode(o[1]) });
       await fetch('/kaydet?ad=uyap-js-cikti.xml', { method: 'POST', body: kodla.encode(r.metin) });
       await fetch('/kaydet?ad=uyap-ornek.zip', { method: 'POST', body: zip });
