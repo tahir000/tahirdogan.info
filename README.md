@@ -7,6 +7,7 @@ Otomasyon projeleri deposu. Site: https://tahirdogan.info
 | Proje | Adres | Ne yapar |
 | --- | --- | --- |
 | Excel Birleştirme | [tahirdogan.info/excel-birlestirme](https://tahirdogan.info/excel-birlestirme/) | Parça parça gelen Excel'leri tek ana Excel'de kurum kurum birleştirir, neyin nereye yazıldığını raporlar. Ayrıntı: `excel-birlestirme/KURULUM.md` |
+| UYAP Takip XML Birleştirme | [tahirdogan.info/uyap-takip-birlestirme](https://tahirdogan.info/uyap-takip-birlestirme/) | UYAP takip XML'lerini borçlu adıyla adlandırır, tek "Toplu Takip" XML'inde birleştirir; çakışan iç kimlikleri düzeltir, sonucu denetler. Testler: `uyap-takip-birlestirme/test/test.html` |
 
 ## Yeni proje eklemek
 

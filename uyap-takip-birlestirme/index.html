@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>UYAP Takip XML Birleştirme</title>
+<style>
+  :root {
+    --zemin: #f3f5f8; --kart: #ffffff; --cizgi: #dce2ea; --yazi: #1c2433; --soluk: #5a6578;
+    --vurgu: #1f4e79; --vurgu-koyu: #173b5c; --vurgu-acik: #e7eff8;
+    --iyi: #1d7246; --iyi-acik: #e5f3eb; --uyari-acik: #fdf2dc; --hata: #b3261e; --hata-acik: #fbe8e6;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--zemin); color: var(--yazi); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  .kap { max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+  header.ust { background: var(--vurgu); color: #fff; padding: 22px 0 20px; }
+  header.ust a.geri { display: inline-block; margin-bottom: 8px; color: #fff; opacity: .85; font-size: 13px; text-decoration: none; }
+  header.ust a.geri:hover, header.ust a.geri:focus-visible { opacity: 1; text-decoration: underline; }
+  header.ust h1 { margin: 0 0 4px; font-size: 23px; }
+  header.ust p { margin: 0; opacity: .92; max-width: 780px; }
+  .gizlilik { display: inline-block; margin-top: 10px; padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,.14); font-size: 13px; }
+  main { padding-bottom: 30px; }
+  .adim { background: var(--kart); border: 1px solid var(--cizgi); border-radius: 10px; padding: 18px 20px; margin: 16px 0; }
+  .adim-baslik { display: flex; align-items: center; gap: 10px; }
+  .adim-baslik h2 { font-size: 17px; margin: 0; }
+  .no { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--vurgu); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; }
+  .ipucu, .soluk { color: var(--soluk); }
+  .ipucu { margin: 6px 0 12px; }
+  .birak { position: relative; display: block; border: 2px dashed #b6c2d1; border-radius: 9px; padding: 20px 16px; text-align: center; color: var(--soluk); cursor: pointer; background: #fafbfd; }
+  .birak:hover, .birak.ustunde { border-color: var(--vurgu); background: var(--vurgu-acik); color: var(--vurgu); }
+  .birak:focus-within { outline: 3px solid #9cc0e6; outline-offset: 2px; }
+  .birak input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+  .birak strong { color: var(--vurgu); }
+  .durum { margin: 8px 0 0; font-size: 14px; }
+  .durum:empty { display: none; }
+  .durum.bilgi { color: var(--vurgu); }
+  .durum.iyi { color: var(--iyi); }
+  .durum.hata { color: var(--hata); font-weight: 600; }
+  button { font: inherit; border-radius: 7px; border: 1px solid #c3ccd8; background: #fff; color: var(--yazi); padding: 8px 16px; cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--vurgu); }
+  button:focus-visible { outline: 3px solid #9cc0e6; outline-offset: 1px; }
+  button.ana-dugme { background: var(--vurgu); border-color: var(--vurgu); color: #fff; font-weight: 600; }
+  button.ana-dugme:hover:not(:disabled) { background: var(--vurgu-koyu); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.kaldir { padding: 2px 9px; line-height: 1.4; color: var(--soluk); }
+  button.baglanti { border: 0; background: none; padding: 0; color: var(--vurgu); text-decoration: underline; }
+  .dugmeler { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .tablo-kap { overflow-x: auto; border: 1px solid var(--cizgi); border-radius: 8px; margin-top: 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid #e8ecf1; vertical-align: top; }
+  th { background: #f4f7fb; font-weight: 600; white-space: nowrap; }
+  td.sayi { white-space: nowrap; text-align: right; }
+  tr.hatali td { color: var(--hata); background: var(--hata-acik); }
+  .yeni-ad { font-weight: 600; word-break: break-word; }
+  .sonuc { margin-top: 14px; border: 1px solid #bfe0cc; background: var(--iyi-acik); border-radius: 9px; padding: 14px 16px; }
+  .sonuc h3 { margin: 0 0 4px; font-size: 16px; word-break: break-word; }
+  .sonuc ul { margin: 8px 0 12px; padding-left: 20px; }
+  .not { margin: 10px 0 0; padding: 7px 10px; border-radius: 7px; background: var(--uyari-acik); color: #5d4200; font-size: 13.5px; }
+  footer.alt { color: var(--soluk); font-size: 13px; padding: 0 16px 28px; }
+  footer.alt ul { margin: 6px 0 0; padding-left: 20px; }
+  @media (max-width: 640px) { .adim { padding: 14px; } header.ust h1 { font-size: 20px; } }
+</style>
+</head>
+<body>
+<header class="ust">
+  <div class="kap">
+    <a class="geri" href="../">← Tüm projeler</a>
+    <h1>UYAP Takip XML Birleştirme</h1>
+    <p>İcra programının ürettiği UYAP takip XML'lerini borçlu adıyla adlandırır ve tek seferde takip açılışı için tek bir "Toplu Takip" XML'inde birleştirir.</p>
+    <span class="gizlilik">Dosyalar bilgisayarınızdan çıkmaz: tüm işlem bu sayfada, tarayıcıda yapılır.</span>
+  </div>
+</header>
+
+<main class="kap">
+  <section class="adim" aria-labelledby="b-sec">
+    <div class="adim-baslik"><span class="no">1</span><h2 id="b-sec">Takip XML'leri</h2></div>
+    <p class="ipucu">Birleştirilecek takip XML'lerini seçin ya da sürükleyin. Her dosyanın borçlusu, alacaklısı, tutarı ve yeni adı aşağıda görünür. UYAP takip XML'i olmayan dosyalar nedeniyle birlikte ayrı gösterilir ve birleştirmeye alınmaz.</p>
+    <label class="birak" id="birak">
+      <input type="file" id="girdi" accept=".xml,text/xml,application/xml" multiple>
+      <span><strong>XML dosyalarını seçin</strong> ya da buraya sürükleyin</span>
+    </label>
+    <p class="durum" id="sec-durum" role="status"></p>
+    <div id="liste"></div>
+  </section>
+
+  <section class="adim" aria-labelledby="b-birlestir">
+    <div class="adim-baslik"><span class="no">2</span><h2 id="b-birlestir">Birleştir ve indir</h2></div>
+    <p class="ipucu">Dosyalar borçlu adına göre sıralanır. Her dosyadaki takip bloğu olduğu gibi alınır; yalnız dosyalar arasında çakışan iç kimlikler yeniden numaralanır ve sonuç denetlenir.</p>
+    <div class="dugmeler">
+      <button type="button" id="birlestir" class="ana-dugme" disabled>Birleştir</button>
+      <button type="button" id="temizle">Baştan başla</button>
+    </div>
+    <p class="durum" id="birlestir-durum" role="status"></p>
+    <div id="sonuc" aria-live="polite"></div>
+  </section>
+</main>
+
+<footer class="kap alt">
+  <p>Ne yapar:</p>
+  <ul>
+    <li>Her dosyada rolü "BORÇLU" ile başlayan tarafların adını bulur; dosyayı bu adla adlandırır.</li>
+    <li>Tüm dosyalardaki takip (<code>&lt;dosya&gt;</code>) bloklarını ilk dosyanın başlığı altında tek dosyada toplar.</li>
+    <li>Aynı iç kimlik (ör. taraf_11) birden çok dosyada varsa sonrakilerde benzersiz yapar ve o takipteki atıfları da günceller.</li>
+    <li>Birleşik dosyada kimliklerin benzersiz olduğunu ve her atfın kendi takibinde karşılığı olduğunu denetler.</li>
+  </ul>
+</footer>
+
+<script src="uyap.js"></script>
+<script src="zip.js"></script>
+<script src="arayuz.js"></script>
+</body>
+</html>
