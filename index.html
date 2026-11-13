@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex, nofollow">
 <title>Otomasyon Projeleri</title>
@@ -16,6 +16,7 @@
   header { background: var(--vurgu); color: #fff; padding: 34px 0 30px; }
   .alan { margin: 0 0 6px; font-size: 13px; letter-spacing: .4px; opacity: .8; }
   h1 { margin: 0 0 8px; font-size: 26px; }
+  #baslik { cursor: default; -webkit-user-select: none; user-select: none; touch-action: manipulation; }
   header p:last-child { margin: 0; max-width: 680px; opacity: .92; }
   main { padding-top: 26px; padding-bottom: 36px; }
   h2 { margin: 0 0 12px; font-size: 15px; font-weight: 600; color: var(--soluk); }
@@ -37,7 +38,7 @@
 <header>
   <div class="kap">
     <p class="alan">tahirdogan.info</p>
-    <h1>Otomasyon Projeleri</h1>
+    <h1 id="baslik">Otomasyon Projeleri</h1>
     <p>Büro işleri için hazırlanmış küçük araçlar. Araçlar tarayıcıda çalışır; seçtiğiniz dosyalar bu sitenin sunucusuna gönderilmez.</p>
   </div>
 </header>
@@ -67,5 +68,6 @@
 <footer class="kap">
   <p>Yeni araçlar eklendikçe bu listede görünür.</p>
 </footer>
+<script src="ana.js"></script>
 </body>
 </html>

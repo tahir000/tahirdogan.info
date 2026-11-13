@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>Büro Araçları</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233b3f73'/%3E%3Cpath d='M9 10h14M9 16h14M9 22h9' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  :root { --zemin: #f3f4f8; --kart: #ffffff; --cizgi: #dcdeea; --yazi: #1c2433; --soluk: #5a6078; --vurgu: #3b3f73; --vurgu-koyu: #2c2f57; --vurgu-acik: #ecedf7; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--zemin); color: var(--yazi); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  .kap { max-width: 1000px; margin: 0 auto; padding: 0 16px; }
+  header { background: var(--vurgu); color: #fff; padding: 30px 0 28px; }
+  header a.geri { display: inline-block; margin-bottom: 8px; color: #fff; opacity: .85; font-size: 13px; text-decoration: none; }
+  header a.geri:hover, header a.geri:focus-visible { opacity: 1; text-decoration: underline; }
+  h1 { margin: 0 0 8px; font-size: 26px; }
+  header p:last-child { margin: 0; max-width: 680px; opacity: .92; }
+  main { padding-top: 26px; padding-bottom: 36px; }
+  .projeler { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin: 0; padding: 0; list-style: none; }
+  .proje { display: flex; flex-direction: column; gap: 10px; padding: 18px 18px 16px; background: var(--kart); border: 1px solid var(--cizgi); border-radius: 12px; }
+  .proje h2 { margin: 0; font-size: 18px; }
+  .proje p { margin: 0; color: var(--soluk); }
+  .etiketler { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+  .etiketler li { padding: 2px 9px; border-radius: 10px; background: var(--vurgu-acik); color: var(--vurgu); font-size: 12.5px; }
+  .alt-satir { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; padding-top: 4px; }
+  .tarih { font-size: 12.5px; color: var(--soluk); }
+  .ac { display: inline-block; padding: 8px 16px; border-radius: 8px; background: var(--vurgu); color: #fff; font-weight: 600; text-decoration: none; }
+  .ac:hover { background: var(--vurgu-koyu); }
+  .ac:focus-visible { outline: 3px solid #b3b7e6; outline-offset: 2px; }
+  footer { padding-bottom: 30px; color: var(--soluk); font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="kap">
+    <a class="geri" href="../">← Ana sayfa</a>
+    <h1>Büro Araçları</h1>
+    <p>Ana sayfada listelenmeyen araçlar. Seçtiğiniz dosyalar bu sitenin sunucusuna gönderilmez; her şey tarayıcıda işlenir.</p>
+  </div>
+</header>
+<main class="kap">
+  <ul class="projeler">
+    <li class="proje">
+      <h2>Bilirkişi Raporuna Beyan</h2>
+      <p>Büronun beyan dilekçesi şablonundan yeni dosya için UDF dilekçe hazırlar. Mahkeme, esas no, borçlu, tarihler, icra dosyası, plaka ve tutarlar rapordan önerilir; şablonun metni ve biçimi aynen kalır.</p>
+      <ul class="etiketler"><li>UDF</li><li>Bilirkişi</li><li>Tarayıcıda çalışır</li></ul>
+      <div class="alt-satir">
+        <span class="tarih">Kasım 2026</span>
+        <a class="ac" href="bilirkisi-beyan/">Aracı aç</a>
+      </div>
+    </li>
+  </ul>
+</main>
+<footer class="kap">
+  <p>Bu sayfaya ana sayfadaki başlığa art arda üç kez tıklanarak gelinir.</p>
+</footer>
+</body>
+</html>
