@@ -8,6 +8,7 @@ Otomasyon projeleri deposu. Site: https://tahirdogan.info
 | --- | --- | --- |
 | Excel Birleştirme | [tahirdogan.info/excel-birlestirme](https://tahirdogan.info/excel-birlestirme/) | Parça parça gelen Excel'leri tek ana Excel'de kurum kurum birleştirir: aynı icra dairesi ve dosya numarası tek satırda toplanır, sütunları ve eşleştirmeyi kullanıcı seçer, neyin nereye yazıldığı raporlanır. Ayrıntı: `excel-birlestirme/KURULUM.md` |
 | VakıfBank Takip XML Birleştirme | [tahirdogan.info/uyap-takip-birlestirme](https://tahirdogan.info/uyap-takip-birlestirme/) | UYAP takip XML'lerini borçlu adıyla adlandırır, tek "Toplu Takip" XML'inde birleştirir; çakışan iç kimlikleri düzeltir, sonucu denetler. Testler: `uyap-takip-birlestirme/test/test.html` |
+| Ekstre 89/1 Taraması | [tahirdogan.info/ekstre-89-1-tarama](https://tahirdogan.info/ekstre-89-1-tarama/) | Borçluların VakıfBank mevduat ekstrelerini (PDF) tarayıcıda okur; maaş, düzenli şirket ödemesi, platform, e-para, kripto, bahis ve başka banka hareketlerinden 89/1 muhataplarını puanlar ve Excel verir. Genel Dosya Raporu ve `tarama_gecmisi.csv` ile son taranan borçluları dışarıda bırakan haftalık liste çıkarır. |
 
 ## Yeni proje eklemek
 
