@@ -96,6 +96,7 @@
     const dugme = function (i) { return pk.querySelector('[data-i="' + i + '"]'); };
     const D = function () { return w.__mersisTakip.durum(); };
     ok(/Sorgu listesini yükleyin/.test(p('yon').textContent), 'liste yokken panel listeyi ister');
+    ok(p('uyari').classList.contains('gizli'), 'Firma Sorgulama formu olan sayfada "yalnız MERSİS" uyarısı çıkmaz');
     p('listeMetin').value = listeMetni;
     dugme('yukle').click();
     const hazir = function (o) { return function () { return o.a === 'vkn' ? doc.getElementById('VergiNo').value === o.v : doc.getElementById('TamUnvan').value === o.n; }; };
