@@ -493,7 +493,7 @@
     };
 
     /* ---------- Başlangıç ---------- */
-    if (!/(^|\.)mersis\.ticaret\.gov\.tr$/.test(location.hostname) && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
+    if (!sayfaUygun() && !/(^|\.)mersis\.ticaret\.gov\.tr$/.test(location.hostname)) {
       uyar('Bu yer imi yalnız MERSİS sitesinde çalışır.', true);
       var a = document.createElement('a'); a.href = MERSIS_ADRESI; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'MERSİS Firma Sorgulama sayfasını aç';
       el('uyari').appendChild(document.createElement('br')); el('uyari').appendChild(a);
