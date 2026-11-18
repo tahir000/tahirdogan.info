@@ -75,6 +75,11 @@
   .not { margin: 10px 0 0; padding: 7px 10px; border-radius: 7px; background: var(--uyari-acik); color: #5d4200; font-size: 13.5px; }
   footer.alt { color: var(--soluk); font-size: 13px; padding: 0 16px 28px; }
   footer.alt ul { margin: 6px 0 0; padding-left: 20px; }
+  details > summary { cursor: pointer; color: var(--vurgu); font-weight: 600; margin: 4px 0; }
+  .eklenti { border: 1px solid var(--cizgi); border-radius: 9px; padding: 12px 14px; background: #fafbfd; }
+  .eklenti .durum-satiri { margin: 6px 0 0; }
+  .eklenti .h { color: var(--hata); font-weight: 600; }
+  .eklenti .ok { color: var(--iyi); font-weight: 600; }
   @media (max-width: 640px) { .adim { padding: 14px; } header.ust h1 { font-size: 20px; } }
 </style>
 </head>
@@ -90,11 +95,11 @@
 
 <main class="kap">
   <section class="adim" aria-labelledby="b-rapor">
-    <div class="adim-baslik"><span class="no">1</span><h2 id="b-rapor">Bu haftanın listesi <span class="soluk">(isteğe bağlı)</span></h2></div>
-    <p class="ipucu">Genel Dosya Raporu (İcra Dosya) Excel'ini seçin; borçlu adı, takip no ve bakiye buradan alınır. Önceki taramadan kalan <strong>tarama_gecmisi.csv</strong> dosyasını da seçerseniz son taranan borçlular bu haftanın listesine alınmaz. İkisini birlikte seçebilirsiniz.</p>
+    <div class="adim-baslik"><span class="no">1</span><h2 id="b-rapor">Genel Dosya Raporu ve bu haftanın listesi</h2></div>
+    <p class="ipucu">Genel Dosya Raporu (İcra Dosya) Excel'ini seçin; borçlu adı, takip no ve bakiye buradan alınır. Tarama geçmişi bu tarayıcıda saklanır ve her analizden sonra kendiliğinden güncellenir; son taranan borçlular listeye alınmaz. Elinizde önceden kalma bir <strong>tarama_gecmisi.csv</strong> varsa bir kez buraya bırakmanız yeterli.</p>
     <label class="birak" id="rapor-birak">
       <input type="file" id="rapor-girdi" accept=".xlsx,.csv" multiple>
-      <span><strong>Genel Dosya Raporu (.xlsx) ve tarama geçmişi (.csv)</strong> seçin ya da buraya sürükleyin</span>
+      <span><strong>Genel Dosya Raporu (.xlsx)</strong> seçin ya da buraya sürükleyin</span>
     </label>
     <div class="secenekler">
       <label>Yeniden tarama süresi: <input type="number" id="gun" min="0" value="90"> gün <span class="soluk">(0 = bir kez taranan bir daha alınmaz)</span></label>
@@ -106,26 +111,32 @@
   </section>
 
   <section class="adim" aria-labelledby="b-pdf">
-    <div class="adim-baslik"><span class="no">2</span><h2 id="b-pdf">Ekstre PDF'leri</h2></div>
-    <p class="ipucu">Borçluların banka sisteminden indirilen mevduat ve kredi kartı ekstre PDF'lerini seçin. Dosya adı <strong>AD SOYAD_MüşteriNo.pdf</strong> biçiminde olmalı (aynı borçlunun ek hesapları " (1)", " (2)" ekiyle). Aynı içerikteki mükerrer dosyalar bir kez sayılır.</p>
-    <label class="birak" id="pdf-birak">
-      <input type="file" id="pdf-girdi" accept=".pdf,application/pdf" multiple>
-      <span><strong>PDF ekstreleri seçin</strong> ya da buraya sürükleyin</span>
-    </label>
-    <div class="dugmeler ust-bosluk">
-      <button type="button" id="klasor-sec">Klasör seç</button>
-      <input type="file" id="klasor-girdi" class="gizli" webkitdirectory multiple>
-      <span class="soluk">Bir klasördeki tüm PDF'leri birden eklemek için.</span>
-    </div>
+    <div class="adim-baslik"><span class="no">2</span><h2 id="b-pdf">Ekstreleri indir</h2></div>
+    <div id="eklenti-kutu"></div>
+    <details id="elle" class="ust-bosluk">
+      <summary>PDF'leri elle seçin</summary>
+      <p class="ipucu">Borçluların mevduat ve kredi kartı ekstre PDF'leri. Dosya adı <strong>AD SOYAD_MüşteriNo.pdf</strong> biçiminde olmalı (aynı borçlunun ek hesapları " (1)", " (2)" ekiyle). Aynı içerikteki mükerrer dosyalar bir kez sayılır.</p>
+      <label class="birak" id="pdf-birak">
+        <input type="file" id="pdf-girdi" accept=".pdf,application/pdf" multiple>
+        <span><strong>PDF ekstreleri seçin</strong> ya da buraya sürükleyin</span>
+      </label>
+      <div class="dugmeler ust-bosluk">
+        <button type="button" id="klasor-sec">Klasör seç</button>
+        <input type="file" id="klasor-girdi" class="gizli" webkitdirectory multiple>
+        <span class="soluk">Bir klasördeki tüm PDF'leri birden eklemek için.</span>
+      </div>
+    </details>
     <p class="durum" id="pdf-durum" role="status"></p>
     <div id="pdf-liste"></div>
   </section>
 
   <section class="adim" aria-labelledby="b-analiz">
     <div class="adim-baslik"><span class="no">3</span><h2 id="b-analiz">Analiz et ve indir</h2></div>
-    <p class="ipucu">PDF'ler okunur, hareketler sınıflandırılır ve her borçlu için 89/1 muhatapları puanlanır. Sonuç Excel'inde aday listesi, muhataplar, dikkat çeken hareketler, tüm hareketler ve ekstre listesi ayrı sayfalardadır.</p>
+    <p class="ipucu">PDF'ler okunur, hareketler sınıflandırılır ve her borçlu için 89/1 muhatapları puanlanır. Elle PDF seçmediyseniz ekstreler indirme klasöründen alınır (ilk seferde <strong>İndirilenler › Galle Ekstreler</strong> klasörünü seçmeniz istenir). Sonuç Excel'inde aday listesi, muhataplar, dikkat çeken hareketler, tüm hareketler ve ekstre listesi ayrı sayfalardadır.</p>
+    <p class="soluk" id="klasor-bilgi"></p>
     <div class="dugmeler">
       <button type="button" id="analiz" class="ana-dugme" disabled>Analiz et</button>
+      <button type="button" id="klasor-degistir" hidden>İndirme klasörünü değiştir</button>
       <button type="button" id="temizle">Baştan başla</button>
     </div>
     <progress id="ilerleme" hidden></progress>
@@ -140,7 +151,8 @@
     <li>Ekstre hareketlerinden karşı tarafı çıkarır: maaş ödeyen kurum (ad ya da maaş kurum kodu), FAST/EFT/havale gönderen kişi ve şirketler, POS, nakit yatıran kişi.</li>
     <li>Maaş, düzenli şirket ödemesi, Trendyol/Uber/Martı gibi platform gelirleri, e-para (Papara, Sipay vb.), kripto (Binance TR, Paribu vb.), bahis (Nesine, Misli, TJK vb.), başka bankadaki kendi hesabı, kira, icra dosyası alacağı gibi muhatapları puanlar.</li>
     <li>Tapu, araç, yüksek tutarlı çıkış, başkasının e-para cüzdanına transfer gibi 89/1 dışı dikkat çeken hareketleri ayrıca işaretler. Emekli aylığı haczedilemediği için puana katılmaz.</li>
-    <li>Tarama geçmişi ile her hafta yalnızca yakın zamanda taranmamış borçluları listeler; analizden sonra güncel geçmiş dosyasını verir.</li>
+    <li>Tarama geçmişini bu tarayıcıda saklar; her hafta yalnızca yakın zamanda taranmamış borçluları listeler. Geçmişi istediğiniz an .csv olarak yedekleyebilirsiniz.</li>
+    <li>Ekstre İndirici eklentisi kuruluysa listedeki borçluların ekstrelerini banka ekranından sırayla indirir; eklenti yoksa PDF'ler elle seçilir.</li>
   </ul>
 </footer>
 
