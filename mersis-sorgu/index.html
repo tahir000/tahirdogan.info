@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>MERSİS Şirket Sorgulama</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f4e79'/%3E%3Cpath d='M9 10h14M9 16h14M9 22h9' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --zemin: #f3f5f8; --kart: #ffffff; --cizgi: #dce2ea; --yazi: #1c2433; --soluk: #5a6578;
+    --vurgu: #1f4e79; --vurgu-koyu: #173b5c; --vurgu-acik: #e7eff8;
+    --iyi: #1d7246; --iyi-acik: #e5f3eb; --uyari-acik: #fdf2dc; --hata: #b3261e; --hata-acik: #fbe8e6;
+    --turuncu-acik: #ffe7cf; --gri-acik: #eceff3; --sari-acik: #fff4cc; --kirmizi-acik: #fbe0dd;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--zemin); color: var(--yazi); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  .kap { max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+  header.ust { background: var(--vurgu); color: #fff; padding: 22px 0 20px; }
+  header.ust a.geri { display: inline-block; margin-bottom: 8px; color: #fff; opacity: .85; font-size: 13px; text-decoration: none; }
+  header.ust a.geri:hover, header.ust a.geri:focus-visible { opacity: 1; text-decoration: underline; }
+  header.ust h1 { margin: 0 0 4px; font-size: 23px; }
+  header.ust p { margin: 0; opacity: .92; max-width: 800px; }
+  .gizlilik { display: inline-block; margin-top: 10px; padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,.14); font-size: 13px; }
+  main { padding-bottom: 30px; }
+  .adim { background: var(--kart); border: 1px solid var(--cizgi); border-radius: 10px; padding: 18px 20px; margin: 16px 0; }
+  .adim.kapali { opacity: .55; }
+  .adim-baslik { display: flex; align-items: center; gap: 10px; }
+  .adim-baslik h2 { font-size: 17px; margin: 0; }
+  .no { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--vurgu); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; }
+  .ipucu, .soluk { color: var(--soluk); }
+  .ipucu { margin: 6px 0 12px; }
+  .birak { position: relative; display: block; border: 2px dashed #b6c2d1; border-radius: 9px; padding: 20px 16px; text-align: center; color: var(--soluk); cursor: pointer; background: #fafbfd; }
+  .birak:hover, .birak.ustunde { border-color: var(--vurgu); background: var(--vurgu-acik); color: var(--vurgu); }
+  .birak:focus-within { outline: 3px solid #9cc0e6; outline-offset: 2px; }
+  .birak input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+  .birak strong { color: var(--vurgu); }
+  .durum { margin: 8px 0 0; font-size: 14px; }
+  .durum:empty { display: none; }
+  .durum.bilgi { color: var(--vurgu); }
+  .durum.iyi { color: var(--iyi); }
+  .durum.hata { color: var(--hata); font-weight: 600; }
+  button { font: inherit; border-radius: 7px; border: 1px solid #c3ccd8; background: #fff; color: var(--yazi); padding: 8px 16px; cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--vurgu); }
+  button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visible { outline: 3px solid #9cc0e6; outline-offset: 1px; }
+  button.ana-dugme { background: var(--vurgu); border-color: var(--vurgu); color: #fff; font-weight: 600; }
+  button.ana-dugme:hover:not(:disabled) { background: var(--vurgu-koyu); }
+  button:disabled { opacity: .45; cursor: default; }
+  .dugmeler { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .izgara { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px 16px; }
+  label.alan { display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; color: var(--soluk); }
+  select, input[type=number] { font: inherit; color: var(--yazi); padding: 7px 9px; border: 1px solid #c3ccd8; border-radius: 7px; background: #fff; min-width: 0; }
+  textarea { width: 100%; min-height: 90px; font: 12.5px/1.4 Consolas, "Courier New", monospace; padding: 8px; border: 1px solid #c3ccd8; border-radius: 7px; resize: vertical; }
+  .tablo-kap { overflow-x: auto; border: 1px solid var(--cizgi); border-radius: 8px; margin-top: 12px; max-height: 460px; overflow-y: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { text-align: left; padding: 6px 9px; border-bottom: 1px solid #e8ecf1; vertical-align: top; }
+  th { background: #f4f7fb; font-weight: 600; white-space: nowrap; position: sticky; top: 0; }
+  td.no-h { white-space: nowrap; color: var(--soluk); }
+  tr.turuncu td { background: var(--turuncu-acik); }
+  tr.kirmizi td { background: var(--kirmizi-acik); }
+  tr.gri td { background: var(--gri-acik); }
+  tr.sari td { background: var(--sari-acik); }
+  .ozet { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+  .ozet li { padding: 4px 11px; border-radius: 14px; background: var(--vurgu-acik); color: var(--vurgu); font-size: 13.5px; }
+  .ozet li b { font-weight: 700; }
+  .ozet li.turuncu { background: var(--turuncu-acik); color: #7a3d00; }
+  .ozet li.kirmizi { background: var(--kirmizi-acik); color: #8c1d16; }
+  .ozet li.gri { background: var(--gri-acik); color: #3b4352; }
+  .ozet li.sari { background: var(--sari-acik); color: #5d4200; }
+  .not { margin: 10px 0 0; padding: 8px 11px; border-radius: 7px; background: var(--uyari-acik); color: #5d4200; font-size: 13.5px; }
+  .not.hata { background: var(--hata-acik); color: #8c1d16; }
+  ol.yol { margin: 8px 0 0; padding-left: 22px; }
+  ol.yol li { margin: 6px 0; }
+  .yerimi { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 8px; background: #fff; border: 2px solid var(--vurgu); color: var(--vurgu); font-weight: 700; text-decoration: none; cursor: grab; }
+  .yerimi:active { cursor: grabbing; }
+  .yerimi-kutu { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 14px; border: 1px dashed #b6c2d1; border-radius: 9px; background: #fafbfd; }
+  kbd { font: 12px Consolas, monospace; padding: 1px 6px; border: 1px solid #c3ccd8; border-bottom-width: 2px; border-radius: 4px; background: #fff; }
+  a.dis { color: var(--vurgu); font-weight: 600; }
+  details summary { cursor: pointer; color: var(--vurgu); margin-top: 10px; }
+  .gizli { display: none !important; }
+  footer.alt { color: var(--soluk); font-size: 13px; padding: 0 16px 28px; }
+  footer.alt ul { margin: 6px 0 0; padding-left: 20px; }
+  @media (max-width: 640px) { .adim { padding: 14px; } header.ust h1 { font-size: 20px; } }
+</style>
+</head>
+<body>
+<header class="ust">
+  <div class="kap">
+    <a class="geri" href="../">← Tüm projeler</a>
+    <h1>MERSİS Şirket Sorgulama</h1>
+    <p>Borçlu listesindeki şirketleri sorumlu kişiye göre MERSİS'te sorgular: şirket aktif mi, tasfiye halinde mi, terkin mi edilmiş, konkordato ya da iflas kaydı var mı. Sonuçlar Excel'deki SONUÇ sütununa ve ayrıntılı bir sayfaya yazılır.</p>
+    <span class="gizlilik">Excel bilgisayarınızdan çıkmaz: okuma ve yazma bu sayfada, tarayıcıda yapılır.</span>
+  </div>
+</header>
+
+<main class="kap">
+  <section class="adim" aria-labelledby="b-dosya">
+    <div class="adim-baslik"><span class="no">1</span><h2 id="b-dosya">Excel dosyası</h2></div>
+    <p class="ipucu">Şirket listesinin bulunduğu Excel'i (.xlsx) seçin ya da sürükleyin. Listede şirket ünvanı, vergi numarası ve sorumlu kişi sütunları olmalı.</p>
+    <label class="birak" id="birak">
+      <input type="file" id="girdi" accept=".xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+      <span><strong>Excel dosyasını seçin</strong> ya da buraya sürükleyin</span>
+    </label>
+    <p class="durum" id="dosya-durum" role="status"></p>
+  </section>
+
+  <section class="adim kapali" id="adim-sutun" aria-labelledby="b-sutun">
+    <div class="adim-baslik"><span class="no">2</span><h2 id="b-sutun">Sayfa ve sütunlar</h2></div>
+    <p class="ipucu">Sütunlar başlıklarından tanınır; yanlışsa düzeltin. Vergi numarası geçerli olmayan şirketler ünvanla aranır.</p>
+    <div class="izgara">
+      <label class="alan">Sayfa<select id="sayfa"></select></label>
+      <label class="alan">Başlık satırı<input type="number" id="baslik-satiri" min="1" value="1"></label>
+      <label class="alan">Şirket ünvanı<select id="s-unvan"></select></label>
+      <label class="alan">Vergi numarası<select id="s-vkn"></select></label>
+      <label class="alan">Sorumlu<select id="s-sorumlu"></select></label>
+      <label class="alan">Sonucun yazılacağı sütun<select id="s-sonuc"></select></label>
+    </div>
+    <p class="durum" id="sutun-durum" role="status"></p>
+  </section>
+
+  <section class="adim kapali" id="adim-kisi" aria-labelledby="b-kisi">
+    <div class="adim-baslik"><span class="no">3</span><h2 id="b-kisi">Sorumlu kişi</h2></div>
+    <p class="ipucu">Kimin şirketleri sorgulanacak? Dernek, vakıf ve kamu kurumları MERSİS'te kayıtlı olmadığından sorgulanmaz, sonuçlarına bu not yazılır.</p>
+    <div class="izgara"><label class="alan">Sorumlu kişi<select id="kisi"></select></label></div>
+    <ul class="ozet" id="liste-ozet"></ul>
+    <details id="liste-ayrinti"><summary>Sorgulanacak şirketleri göster</summary><div class="tablo-kap"><table id="liste-tablo"></table></div></details>
+  </section>
+
+  <section class="adim kapali" id="adim-sorgu" aria-labelledby="b-sorgu">
+    <div class="adim-baslik"><span class="no">4</span><h2 id="b-sorgu">MERSİS'te sorgulayın</h2></div>
+    <p class="ipucu">Sorgular MERSİS'in kendi sayfasında, sizin e-Devlet oturumunuzla yapılır. Güvenlik kodunu siz girersiniz; <b>MERSİS Takip</b> yer imi sıradaki şirketi forma yazar, sonucu okur ve kaydeder.</p>
+    <div class="yerimi-kutu">
+      <a class="yerimi" id="yerimi" href="#" draggable="true" title="Yer imleri çubuğuna sürükleyin">★ MERSİS Takip</a>
+      <span class="soluk">Bu düğmeyi fareyle <b>yer imleri çubuğuna sürükleyin</b> (bir kez yapılır). Çubuk görünmüyorsa <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd>.</span>
+      <button type="button" id="yerimi-kopyala">Yer imi adresini kopyala</button>
+    </div>
+    <p class="durum" id="yerimi-durum" role="status"></p>
+    <ol class="yol">
+      <li><button type="button" id="liste-kopyala" class="ana-dugme" disabled>Sorgu listesini kopyala</button> <span class="soluk" id="liste-kopyala-not"></span></li>
+      <li><a class="dis" href="https://mersis.ticaret.gov.tr/Common/FirmaSorgulamaIslemleri/FirmaSorgulama" target="_blank" rel="noopener noreferrer">MERSİS Firma Sorgulama sayfasını açın</a> ve e-Devlet ile giriş yapın.</li>
+      <li>Firma Sorgulama sayfasında yer imleri çubuğundaki <b>★ MERSİS Takip</b>'e tıklayın. Açılan panele listeyi yapıştırıp <b>Listeyi yükle</b>'ye basın.</li>
+      <li>Her şirket için <b>güvenlik kodunu yazıp Enter'a basın</b>. Gerisini yer imi yapar; sayfadaki panel sıradaki şirketi ve ilerlemeyi gösterir.</li>
+      <li>MERSİS kişi başı yaklaşık 50 sorguya izin verir. Sınır dolunca çıkış yapın, başka bir e-Devlet hesabıyla girin, Firma Sorgulama'da yer imine yeniden tıklayın: kaldığı yerden sürer.</li>
+      <li>Bitince paneldeki <b>Sonuçları kopyala</b>'ya basın ve aşağıdaki 5. adıma yapıştırın.</li>
+    </ol>
+    <div class="gizli" id="liste-yedek"><p class="not">Pano kullanılamadı. Aşağıdaki metnin tamamını seçip <kbd>Ctrl</kbd>+<kbd>C</kbd> ile kopyalayın.</p><textarea id="liste-metin" readonly></textarea></div>
+    <p class="durum" id="sorgu-durum" role="status"></p>
+  </section>
+
+  <section class="adim kapali" id="adim-sonuc" aria-labelledby="b-sonuc">
+    <div class="adim-baslik"><span class="no">5</span><h2 id="b-sonuc">Sonuçları Excel'e yazın</h2></div>
+    <p class="ipucu">MERSİS Takip panelinden kopyaladığınız sonuçları buraya yapıştırın. Sorgular yarım kaldıysa da yapıştırabilirsiniz; sorgulanmayanların SONUÇ hücresi boş kalır.</p>
+    <textarea id="sonuc-metin" placeholder="Sonuçları buraya yapıştırın (Ctrl+V)"></textarea>
+    <div class="dugmeler" style="margin-top:8px">
+      <button type="button" id="panodan">Panodan yapıştır</button>
+      <button type="button" id="indir" class="ana-dugme" disabled>Excel'i indir</button>
+    </div>
+    <p class="durum" id="sonuc-durum" role="status"></p>
+    <ul class="ozet" id="sonuc-ozet"></ul>
+    <div id="sonuc-not"></div>
+    <div class="tablo-kap gizli" id="sonuc-kap"><table id="sonuc-tablo"></table></div>
+  </section>
+</main>
+
+<footer class="kap alt">
+  <p>Ne yapar:</p>
+  <ul>
+    <li>Seçilen sorumlunun satırlarını alır; vergi numarasını kontrol hanesinden geçirir, geçersizse şirketi ünvanla aratır.</li>
+    <li>MERSİS'te firma durumunu (Aktif, Tasfiye Halinde, Terkin Edilmiş), kuruluş tarihi, MERSİS ve sicil numarasını, sicil müdürlüğünü, adresi ve konkordato/iflas kayıtlarını okur.</li>
+    <li>İndirilen Excel'de yalnız SONUÇ hücreleri değişir ve "MERSİS" adlı yeni bir ayrıntı sayfası eklenir; öteki sayfalar, biçimler ve formüller olduğu gibi kalır. Konkordato/iflas turuncu, terkin ve tasfiye kırmızı, bulunamayan ve sorgulanmayanlar gri boyanır.</li>
+    <li>Güvenlik kodunu çözmez ve kendiliğinden sorgu göndermez; her sorguyu siz başlatırsınız.</li>
+  </ul>
+</footer>
+
+<script src="mersis.js"></script>
+<script src="xlsx.js"></script>
+<script src="takip.js"></script>
+<script src="arayuz.js"></script>
+</body>
+</html>
