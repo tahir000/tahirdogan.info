@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERSİS taklidi (test)</title>
+<style>
+  body { font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; margin: 16px; color: #1c2433; }
+  form { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: end; padding: 10px; border: 1px solid #ccd; margin-bottom: 12px; }
+  label { display: flex; flex-direction: column; font-size: 12px; }
+  .list-group-item { display: block; padding: 6px 8px; border: 1px solid #dde; margin: 2px 0; color: #123; text-decoration: none; }
+  .alert-danger { background: #fbe8e6; color: #8c1d16; padding: 6px 10px; margin: 6px 0; }
+  .alan { margin: 4px 0; } .alan > div:first-child { font-weight: 600; }
+  .collapse { display: none; } .collapse.in { display: block; }
+  table { border-collapse: collapse; } td, th { border: 1px solid #ccd; padding: 3px 6px; }
+</style>
+</head>
+<body>
+<p>Bu sayfa MERSİS Firma Sorgulama sayfasının testler için basit bir taklididir. Adlar ve numaralar uydurmadır.</p>
+<div id="mesajlar"></div>
+<form id="form0" action="#" method="post">
+  <label>MERSİS No<input id="MersisNo" name="MersisNo" type="text"></label>
+  <label>Vergi No<input id="VergiNo" name="VergiNo" type="text"></label>
+  <label>Unvan<input id="TamUnvan" name="TamUnvan" type="text"></label>
+  <label>Ticaret Sicil No<input id="SicilNo" name="SicilNo" type="text"></label>
+  <label>Firma Durumu<select id="FirmaDurumuId"><option value="">...</option><option value="1">Aktif</option><option value="3">Terkin Edilmiş</option></select></label>
+  <label>Ticaret Sicili Müdürlüğü<select id="TSMId"><option value="">...</option><option value="258">İSTANBUL</option></select></label>
+  <span id="soru"></span>
+  <input id="Captcha" name="Captcha" type="text" placeholder="Toplamı Giriniz">
+  <button type="submit">Ara</button>
+</form>
+<div id="divFirmaAraResult" class="row"><div class="panel"><div class="panel-heading">Arama Sonuçları</div><div class="panel-body">Arama kriterlerini belirleyerek 'Ara' tuşuna tıklayınız.</div></div></div>
+<script src="ornekler.js"></script>
+<script src="mersis-taklit.js"></script>
+</body>
+</html>
