@@ -115,8 +115,9 @@
   // =====================================================================
   // 2) 89/1 muhatap analizi
   // =====================================================================
-  function analiz89({ hareketler: HAM, ekstreler, musteriler, raporSatirlari, bugun }) {
-    const BUGUN = bugun;
+  // odemePlani: odemePlaniKur çıktısı (isteğe bağlı); odemePlaniAdi: Özet sayfasında kaynak olarak yazılır
+  function analiz89({ hareketler: HAM, ekstreler, musteriler, raporSatirlari, bugun, odemePlani, odemePlaniAdi }) {
+    const BUGUN = bugun; const OP = odemePlani || null;
     const trUp = s => (s || '').replace(/i/g, 'İ').replace(/ı/g, 'I').toUpperCase();
     const fold = s => trUp(s).replace(/İ/g, 'I').replace(/Ü/g, 'U').replace(/Ö/g, 'O').replace(/Ş/g, 'S').replace(/Ç/g, 'C').replace(/Ğ/g, 'G').replace(/Â/g, 'A').replace(/Î/g, 'I').replace(/Û/g, 'U');
     const key = s => fold(s).replace(/[^A-Z0-9]/g, '');
@@ -361,20 +362,29 @@
       });
     }
     ozet.sort((a, b) => a.oneri.localeCompare(b.oneri) || b.puan - a.puan || b.borc - a.borc);
+    // ödeme planı: yürürlükte planı (Aktif/Aksama) olanlar adaylardan ve muhataplardan ayrılır
+    const planli = mus => !!(OP && OP[mus] && OP[mus].haric);
+    for (const o of ozet) { const p = OP && OP[o.musteriNo]; o.odeme = p ? p.ozet : ''; o.opDurum = p ? p.durum : ''; }
+    const ozetPlanli = ozet.filter(o => planli(o.musteriNo))
+      .sort((a, b) => a.opDurum.localeCompare(b.opDurum, 'tr') || a.oneri.localeCompare(b.oneri) || b.puan - a.puan || b.borc - a.borc);
+    for (let i = ozet.length - 1; i >= 0; i--) if (planli(ozet[i].musteriNo)) ozet.splice(i, 1);
+    for (let i = muhataplar.length - 1; i >= 0; i--) if (planli(muhataplar[i].musteriNo)) muhataplar.splice(i, 1);
+    const opIptalSay = ozet.filter(o => o.opDurum === 'İptal').length;
+    ozetPlanli.forEach((o, i) => o.sira = i + 1);
     ozet.forEach((o, i) => o.sira = i + 1);
-    const sira = Object.fromEntries(ozet.map(o => [o.musteriNo, o.sira]));
+    const sira = Object.fromEntries([...ozet.map(o => [o.musteriNo, o.sira]), ...ozetPlanli.map(o => [o.musteriNo, 10000 + o.sira])]);
     muhataplar.sort((a, b) => sira[a.musteriNo] - sira[b.musteriNo] || b.puan - a.puan);
     dikkatHareket.sort((a, b) => sira[a.musteriNo] - sira[b.musteriNo] || a.tespit.localeCompare(b.tespit) || (a.tarih < b.tarih ? 1 : -1));
 
     // ---------- istatistik ----------
     const say = f => ozet.filter(f).length;
     const sayTur = {}; for (const x of muhataplar) { sayTur[x.tespit] ||= new Set(); sayTur[x.tespit].add(x.musteriNo); }
-    const dSay = {}; for (const x of dikkatHareket.filter(d => d.tespit.startsWith('DİKKAT'))) { dSay[x.tespit] ||= new Set(); dSay[x.tespit].add(x.musteriNo); }
+    const dSay = {}; for (const x of dikkatHareket.filter(d => d.tespit.startsWith('DİKKAT') && !planli(d.musteriNo))) { dSay[x.tespit] ||= new Set(); dSay[x.tespit].add(x.musteriNo); }
     const stats = {
       borclu: ozet.length, A: say(o => o.oneri[0] === 'A'), B: say(o => o.oneri[0] === 'B'), C: say(o => o.oneri[0] === 'C'), D: say(o => o.oneri[0] === 'D'),
       itirazli: say(o => o.itiraz), aktif: say(o => o.aktif === 'Evet'), hareket: hareketler.length, ekstre: ekstreler.length,
       okunan: ekstreler.filter(e => e.durum === 'okundu').length, mukerrer: ekstreler.filter(e => /mükerrer/.test(e.durum)).length, okunamayan: ekstreler.filter(e => /okunamadı/.test(e.durum)).length,
-      atlanan: ekstreler.filter(e => /^atlandı/.test(e.durum)).length,
+      atlanan: ekstreler.filter(e => /^atlandı/.test(e.durum)).length, odemePlanli: ozetPlanli.length,
       turler: Object.fromEntries(Object.entries(sayTur).map(([k, v]) => [k, v.size]).sort((a, b) => b[1] - a[1])),
       dikkat: Object.fromEntries(Object.entries(dSay).map(([k, v]) => [k, v.size]).sort((a, b) => b[1] - a[1]))
     };
@@ -385,11 +395,22 @@
       ['89/1 HACİZ İHBARNAMESİ ADAY ANALİZİ', ''],
       ['Hazırlanma tarihi', BUGUN.split('-').reverse().join('.')],
       ['Kaynak', `Seçilen ${stats.ekstre} PDF ekstre (${stats.okunan} benzersiz okundu, ${stats.mukerrer} mükerrer, ${stats.okunamayan} okunamadı${stats.atlanan ? ', ' + stats.atlanan + ' atlandı' : ''})`],
-      ['Borçlu sayısı', stats.borclu],
+      ['Borçlu sayısı', OP ? `${stats.borclu + ozetPlanli.length} (bunların ${ozetPlanli.length}'inde yürürlükte ödeme planı var; aşağıdaki dağılım ve "89-1 Adaylar" / "Muhataplar" sayfaları kalan ${stats.borclu} borçluyu kapsar)` : stats.borclu],
       ['İncelenen hareket', `${stats.hareket} hareket. Not: banka ekstrelerinde yalnızca 10.000 TL ve üzeri hareketler yer alıyor; küçük tutarlı ödemeler (ör. küçük bahis yatırımları, düşük kurye hakedişleri) görünmüyor.`],
       ['', ''], ['SONUÇ DAĞILIMI', ''],
       ['A - Güçlü 89/1 adayı', stats.A], ['B - Olası 89/1 adayı', stats.B], ['C - Zayıf', stats.C], ['D - Tespit yok', stats.D],
-      ['Son 12 ayda hesap hareketi olan', stats.aktif], ['', ''],
+      ['Son 12 ayda hesap hareketi olan', stats.aktif],
+      ...(OP ? [
+        ['', ''], ['ÖDEME PLANI AYIKLAMASI', ''],
+        ['Kaynak', `Galle › Kredi Takip Raporları › Ödeme Planı Raporu${odemePlaniAdi ? ': ' + odemePlaniAdi : ''}.`],
+        ['Aktif planı olan', ozetPlanli.filter(o => o.opDurum === 'Aktif').length],
+        ['Aksama durumundaki planı olan', ozetPlanli.filter(o => o.opDurum === 'Aksama').length + ' (taksit gecikmiş, plan henüz iptal edilmemiş)'],
+        ['Ayrılan borçluların önerisi', ['A', 'B', 'C', 'D'].map(h => `${h}: ${ozetPlanli.filter(o => o.oneri[0] === h).length}`).join(', ')],
+        ['Ne yapıldı', 'Yürürlükte (Aktif/Aksama) planı olan borçlular "89-1 Adaylar" ve "Muhataplar" sayfalarından çıkarılıp "Ödeme Planı Olanlar" sayfasına alındı. "Dikkat Çeken Hareketler", "Tüm Hareketler" ve "Ekstre Listesi" sayfaları ham veri olduğu için tüm borçluları içermeye devam ediyor.'],
+        ['Yalnızca iptal edilmiş planı olan', `${opIptalSay} borçlu — adaylarda kaldı, "Ödeme Planı" sütununda son iptal tarihi yazılı.`],
+        ['Kapsam', 'Plan borçlunun takip dosyalarından yalnızca birini kapsıyorsa, kapsam dışındaki dosya "Planın kapsamadığı dosya" olarak yazıldı; o dosya için 89/1 ayrıca değerlendirilebilir.']
+      ] : []),
+      ['', ''],
       ['TESPİT TÜRÜ', 'BORÇLU SAYISI'], ...Object.entries(stats.turler), ['', ''],
       ['DİKKAT ÇEKEN (89/1 dışı) BULGU', 'BORÇLU SAYISI'], ...Object.entries(stats.dikkat).map(([k, v]) => [k.replace('DİKKAT: ', ''), v]), ['', ''],
       ['PUANLAMA', 'Her muhatap için: tür ağırlığı × güncellik. Ağırlıklar: maaş 5; platform/düzenli şirket ödemesi 4; e-para, kripto, kira 3; başka bankadaki kendi hesabı, bahis şirketi, aracı kurum, icra dosyası, POS, yüksek tutarlı şirket ödemesi 2; sigorta/BES 1,5; şahıs ödemeleri ve VakıfBank yatırım hesabı 1. Güncellik: son 6 ay ×1, 6-12 ay ×0,7, 1-2 yıl ×0,4, daha eski ×0,15. Borçlu puanı = farklı türlerden en güçlü 3 muhatabın toplamı (en fazla 10).'],
@@ -403,19 +424,23 @@
       ['Bahis / kripto / e-para', 'Lisanslı bahis şirketleri (Nesine, Misli, Bilyoner, TJK vb.), kripto platformları (Binance TR = BN Teknoloji A.Ş., Paribu, BtcTurk vb.) ve e-para kuruluşları (Papara, Sipay, PayFix vb.) borçlunun nezdindeki bakiye/alacakları için 89/1 muhatabıdır. Başkasının e-para cüzdanına yapılan transferler yalnızca "dikkat" olarak işaretlendi.'],
       ['Sınırlar', 'Analiz yalnızca VakıfBank ekstrelerine dayanır; kefiller ayrı incelenmemiştir. Otomatik metin ayrıştırması kullanıldığından, ihbarname göndermeden önce ilgili hareketin "Dikkat Çeken Hareketler" sayfasından teyidi önerilir.']
     ].map(([a, b]) => ({ a, b }));
+    const adayKolon = [
+      { key: 'sira', title: 'Sıra', width: 6, type: 'i' }, { key: 'oneri', title: 'Öneri', width: 21 }, { key: 'puan', title: 'Puan', width: 7, type: 'n' },
+      { key: 'borclu', title: 'Borçlu', width: 28 }, { key: 'tip', title: 'Tip', width: 9 }, { key: 'musteriNo', title: 'Müşteri No', width: 14 }, { key: 'takip', title: 'Takip No', width: 11 },
+      { key: 'icra', title: 'İcra Dairesi / Dosya', width: 40 }, { key: 'borc', title: 'Takip Bakiyesi (TL)', width: 15, type: 'n' },
+      { key: 'muhataplar', title: 'Önerilen 89/1 Muhatapları (puan sırasıyla)', width: 90, type: 'w' }, { key: 'dikkat', title: 'Diğer Dikkat Çekenler', width: 70, type: 'w' },
+      { key: 'son', title: 'Son Hareket', width: 11, type: 'd' }, { key: 'aktif', title: 'Son 12 Ayda Hareket', width: 10 }, { key: 'donem', title: 'Ekstre Dönemi', width: 23 },
+      { key: 'hesapSay', title: 'Hesap', width: 7, type: 'i' }, { key: 'ekstreSay', title: 'Ekstre', width: 7, type: 'i' }, { key: 'hareketSay', title: 'Hareket (10 bin+)', width: 9, type: 'i' },
+      { key: 'giris', title: 'Toplam Giriş', width: 15, type: 'n' }, { key: 'cikis', title: 'Toplam Çıkış', width: 15, type: 'n' }, { key: 'acilis', title: 'UYAP Açılış', width: 11 }
+    ];
     const sheets = [
       { name: 'Özet ve Yöntem', header: false, filter: false, cols: [{ key: 'a', title: '', width: 42 }, { key: 'b', title: '', width: 130, type: 'w' }], rows: aciklama, styleFn: (row, c) => c.key === 'a' && (/^[A-ZÇĞİÖŞÜ0-9\/ ()\-]+$/.test(row.a) && row.a.length > 3) ? 9 : null },
-      {
-        name: '89-1 Adaylar', styleFn: gradeStyle, rows: ozet, cols: [
-          { key: 'sira', title: 'Sıra', width: 6, type: 'i' }, { key: 'oneri', title: 'Öneri', width: 21 }, { key: 'puan', title: 'Puan', width: 7, type: 'n' },
-          { key: 'borclu', title: 'Borçlu', width: 28 }, { key: 'tip', title: 'Tip', width: 9 }, { key: 'musteriNo', title: 'Müşteri No', width: 14 }, { key: 'takip', title: 'Takip No', width: 11 },
-          { key: 'icra', title: 'İcra Dairesi / Dosya', width: 40 }, { key: 'borc', title: 'Takip Bakiyesi (TL)', width: 15, type: 'n' },
-          { key: 'muhataplar', title: 'Önerilen 89/1 Muhatapları (puan sırasıyla)', width: 90, type: 'w' }, { key: 'dikkat', title: 'Diğer Dikkat Çekenler', width: 70, type: 'w' },
-          { key: 'son', title: 'Son Hareket', width: 11, type: 'd' }, { key: 'aktif', title: 'Son 12 Ayda Hareket', width: 10 }, { key: 'donem', title: 'Ekstre Dönemi', width: 23 },
-          { key: 'hesapSay', title: 'Hesap', width: 7, type: 'i' }, { key: 'ekstreSay', title: 'Ekstre', width: 7, type: 'i' }, { key: 'hareketSay', title: 'Hareket (10 bin+)', width: 9, type: 'i' },
-          { key: 'giris', title: 'Toplam Giriş', width: 15, type: 'n' }, { key: 'cikis', title: 'Toplam Çıkış', width: 15, type: 'n' }, { key: 'acilis', title: 'UYAP Açılış', width: 11 }
-        ]
-      },
+      { name: '89-1 Adaylar', styleFn: gradeStyle, rows: ozet, cols: OP ? [...adayKolon.slice(0, 9), { key: 'odeme', title: 'Ödeme Planı', width: 30 }, ...adayKolon.slice(9)] : adayKolon },
+      ...(OP ? [{
+        name: 'Ödeme Planı Olanlar', rows: ozetPlanli,
+        styleFn: (row, c) => c.key === 'opDurum' ? (row.opDurum === 'Aktif' ? 5 : 7) : gradeStyle(row, c),
+        cols: [adayKolon[0], { key: 'opDurum', title: 'Ödeme Planı Durumu', width: 11 }, { key: 'odeme', title: 'Ödeme Planı (Galle)', width: 70, type: 'w' }, ...adayKolon.slice(1)]
+      }] : []),
       {
         name: 'Muhataplar', styleFn: gradeStyle, rows: muhataplar, cols: [
           { key: 'oneri', title: 'Borçlu Önerisi', width: 20 }, { key: 'borclu', title: 'Borçlu', width: 26 }, { key: 'musteriNo', title: 'Müşteri No', width: 14 }, { key: 'takip', title: 'Takip No', width: 11 },
@@ -447,7 +472,7 @@
         ]
       }
     ];
-    return { sheets, stats, ozet, muhataplar };
+    return { sheets, stats, ozet, ozetPlanli, muhataplar };
   }
 
   // =====================================================================
@@ -501,14 +526,69 @@
   const gecmisCsv = rows => csvYaz(rows, GECMIS_KOLON);
   const gunFarki = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 86400000);
 
-  function kuyrukKur({ musteriler, gecmis, tarih, yenidenTaramaGun, sadeceAcik }) {
+  // =====================================================================
+  // 4) Galle Ödeme Planı Raporu (Kredi Takip Raporları › Ödeme Planı Raporu › Dosya İsteği Oluştur)
+  //    Aynı çekirdek skill'de scripts/odemeplani.js içinde.
+  // =====================================================================
+  function tarihNorm(v) {
+    if (typeof v === 'number' && isFinite(v) && v > 0) return new Date(Math.round((v - 25569) * 86400000)).toISOString().slice(0, 10);
+    const s = String(v ?? '').trim(); let m;
+    if ((m = s.match(/^(\d{4})-(\d\d)-(\d\d)/))) return m[0];
+    if ((m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/))) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+    if (/^\d+(\.\d+)?$/.test(s)) return tarihNorm(+s);
+    return '';
+  }
+  const trT = d => d ? d.split('-').reverse().join('.') : '';
+  const sayiN = v => (v === '' || v == null || isNaN(+v)) ? null : +v;
+  const durumNorm = s => { s = String(s ?? '').trim(); return /^aktif/i.test(s) ? 'Aktif' : /^aksama/i.test(s) ? 'Aksama' : /^[İi]ptal/.test(s) ? 'İptal' : s; };
+  const odemePlaniRaporuMu = rows => !!(rows.length && 'Müşteri No' in rows[0] && 'Ödeme Planı Durumu' in rows[0]);
+  // rows: rapor satırları; takipMap: { müşteriNo: 'takip1,takip2' } → { müşteriNo: { durum, haric, ozet, planDosya, disarida } }
+  function odemePlaniKur(rows, takipMap) {
+    takipMap = takipMap || {};
+    if (!odemePlaniRaporuMu(rows)) throw new Error('Ödeme Planı Raporu değil: "Müşteri No" ve "Ödeme Planı Durumu" sütunları bulunamadı.');
+    const ham = {};
+    for (const r of rows) {
+      const mus = musNo(r['Müşteri No']); if (!mus) continue;
+      const p = {
+        dosya: String(r['Takip Dosya İd'] ?? '').trim(), id: String(r['Ödeme Planı/İndirim Id'] ?? '').trim(), durum: durumNorm(r['Ödeme Planı Durumu']),
+        ad: String(r['Ödeme Planı Adı'] ?? '').replace(/\s+/g, ' ').trim(), giris: tarihNorm(r['Ödeme Planı Giriş Tarihi']), iptal: tarihNorm(r['Ödeme Planı İptal Tarihi']),
+        taksit: sayiN(r['Ödeme Planı Taksit Sayısı']), odenen: sayiN(r['Ödeme Planı Tahsil Taksit Sayısı']), geciken: sayiN(r['Ödeme Planı Geciken Taksit Sayısı']),
+        sorumluluk: String(r['Sorumluluk Tipi'] ?? '').trim()
+      };
+      (ham[mus] ||= {})[p.id + '|' + p.dosya] = p;
+    }
+    const sonuc = {};
+    for (const [mus, pm] of Object.entries(ham)) {
+      const planlar = Object.values(pm);
+      const aktif = planlar.filter(p => p.durum === 'Aktif'), aksama = planlar.filter(p => p.durum === 'Aksama'), iptal = planlar.filter(p => p.durum === 'İptal');
+      const durum = aktif.length ? 'Aktif' : aksama.length ? 'Aksama' : 'İptal';
+      const gecerli = [...aktif, ...aksama];
+      const planDosya = [...new Set(gecerli.map(p => p.dosya))];
+      const disarida = String(takipMap[mus] || '').split(/[,\s]+/).filter(Boolean).filter(d => !planDosya.includes(d));
+      let ozet;
+      if (gecerli.length) {
+        const byId = {}; for (const p of gecerli) (byId[p.id] ||= { ...p, dosyalar: [] }).dosyalar.push(p.dosya);
+        ozet = Object.values(byId).sort((a, b) => (a.giris < b.giris ? 1 : -1)).map(p =>
+          `${p.durum}: ${p.ad}, ${p.taksit ?? '?'} taksit (${p.odenen ?? 0} ödendi${p.geciken ? ', ' + p.geciken + ' geciken' : ''}), giriş ${trT(p.giris)}, dosya ${[...new Set(p.dosyalar)].join(', ')}${p.sorumluluk && p.sorumluluk !== 'Asıl Borçlu' ? ' (' + p.sorumluluk + ')' : ''}`).join(' | ');
+        if (disarida.length) ozet += ` | Planın kapsamadığı dosya: ${disarida.join(', ')}`;
+      } else {
+        const sonIptal = iptal.map(p => p.iptal).filter(Boolean).sort().pop();
+        ozet = `Yürürlükte plan yok (iptal edilmiş ${new Set(iptal.map(p => p.id)).size} plan${sonIptal ? ', son iptal ' + trT(sonIptal) : ''})`;
+      }
+      sonuc[mus] = { durum, haric: durum !== 'İptal', ozet, planDosya, disarida };
+    }
+    return sonuc;
+  }
+
+  function kuyrukKur({ musteriler, gecmis, tarih, yenidenTaramaGun, sadeceAcik, odemePlani }) {
     const son = {};
     for (const r of gecmis) if (r.taramaTarihi !== tarih && (!son[r.musteriNo] || r.taramaTarihi > son[r.musteriNo].taramaTarihi)) son[r.musteriNo] = r;
     const kuyruk = [], haric = [];
     for (const m of musteriler) {
-      const s = son[m.MusteriNo];
-      const kayit = { no: m.MusteriNo, takip: m.TakipNolar.split(',')[0], takipNolar: m.TakipNolar, unvan: m.Unvan, bakiye: m.Bakiye, icra: m.IcraDosyalar, tip: m.Tip };
+      const s = son[m.MusteriNo]; const op = odemePlani ? odemePlani[m.MusteriNo] : null;
+      const kayit = { no: m.MusteriNo, takip: m.TakipNolar.split(',')[0], takipNolar: m.TakipNolar, unvan: m.Unvan, bakiye: m.Bakiye, icra: m.IcraDosyalar, tip: m.Tip, odeme: op ? op.ozet : '' };
       if (sadeceAcik && !m.icraAcik) { haric.push({ ...kayit, neden: 'Açık takip/icra dosyası yok', sonTarama: s ? s.taramaTarihi : '', sonOneri: s ? s.oneri : '' }); continue; }
+      if (op && op.haric) { haric.push({ ...kayit, neden: `Yürürlükte ödeme planı (${op.durum})`, sonTarama: s ? s.taramaTarihi : '', sonOneri: s ? s.oneri : '' }); continue; }
       if (s) { const g = gunFarki(s.taramaTarihi, tarih); if (yenidenTaramaGun === 0 || g < yenidenTaramaGun) { haric.push({ ...kayit, neden: `Son ${g} günde tarandı (${s.durum})`, sonTarama: s.taramaTarihi, sonOneri: s.oneri }); continue; } }
       kuyruk.push(kayit);
     }
@@ -526,17 +606,17 @@
         name: 'Kuyruk', styleFn: st, rows: K.kuyruk.map(k => ({ ...k, durum: d(k), ekstre: (durum[k.no] || {}).ekstre || '', oneri: (durum[k.no] || {}).oneri || '' })), cols: [
           { key: 'sira', title: 'Sıra', width: 6, type: 'i' }, { key: 'unvan', title: 'Borçlu', width: 30 }, { key: 'no', title: 'Müşteri No', width: 14 }, { key: 'takip', title: 'Takip No (aranacak)', width: 12 },
           { key: 'takipNolar', title: 'Tüm Takip Nolar', width: 18 }, { key: 'icra', title: 'İcra Dairesi / Dosya', width: 50 }, { key: 'bakiye', title: 'Takip Bakiyesi (TL)', width: 16, type: 'n' },
-          { key: 'durum', title: 'Durum', width: 22 }, { key: 'ekstre', title: 'Ekstre', width: 7, type: 'i' }, { key: 'oneri', title: '89/1 Önerisi', width: 22 }
+          { key: 'durum', title: 'Durum', width: 22 }, { key: 'ekstre', title: 'Ekstre', width: 7, type: 'i' }, { key: 'oneri', title: '89/1 Önerisi', width: 22 }, { key: 'odeme', title: 'Ödeme Planı', width: 40 }
         ]
       },
       {
         name: 'Hariç Tutulanlar', rows: K.haric, cols: [
           { key: 'unvan', title: 'Borçlu', width: 30 }, { key: 'no', title: 'Müşteri No', width: 14 }, { key: 'takipNolar', title: 'Takip Nolar', width: 18 }, { key: 'bakiye', title: 'Takip Bakiyesi (TL)', width: 16, type: 'n' },
-          { key: 'neden', title: 'Neden', width: 32 }, { key: 'sonTarama', title: 'Son Tarama', width: 12, type: 'd' }, { key: 'sonOneri', title: 'Son Öneri', width: 22 }
+          { key: 'neden', title: 'Neden', width: 32 }, { key: 'sonTarama', title: 'Son Tarama', width: 12, type: 'd' }, { key: 'sonOneri', title: 'Son Öneri', width: 22 }, { key: 'odeme', title: 'Ödeme Planı (Galle)', width: 70, type: 'w' }
         ]
       }
     ];
   }
 
-  globalThis.Tarama = { PDF_RE, musNo, pdfMusteriNo, pdfUnvan, ekstreleriOku, analiz89, musterileriKur, csvOku, gecmisOku, gecmisBirlestir, gecmisCsv, kuyrukKur, listeSayfalari };
+  globalThis.Tarama = { PDF_RE, musNo, pdfMusteriNo, pdfUnvan, ekstreleriOku, analiz89, musterileriKur, csvOku, gecmisOku, gecmisBirlestir, gecmisCsv, kuyrukKur, listeSayfalari, odemePlaniKur, odemePlaniRaporuMu };
 })();

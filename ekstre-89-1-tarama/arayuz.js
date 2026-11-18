@@ -8,7 +8,7 @@
 
   const T = window.Tarama, X = window.Xlsx;
   const $ = id => document.getElementById(id);
-  const uyg = { rapor: null, gecmis: [], pdfler: [], liste: null, sonuc: null, calisiyor: false, eklentiIs: null, klasorAdi: '' };
+  const uyg = { rapor: null, odemePlani: null, gecmis: [], pdfler: [], liste: null, sonuc: null, calisiyor: false, eklentiIs: null, klasorAdi: '' };
 
   function el(etiket, ozellik, cocuklar) {
     const e = document.createElement(etiket);
@@ -66,6 +66,16 @@
   async function kvKoy(k, v) { try { const d = await db(); await new Promise((coz, red) => { const t = d.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = coz; t.onerror = () => red(t.error); }); } catch (e) { /* yoksay */ } }
   const RAPOR_SUTUN = ['Takip Dosya No', 'Müşteri No', 'Müşteri Ünvan', 'Takip Dosya Tipi', 'Dosya Durum', 'İcra Durum', 'İcra Dairesi', 'İcra Dosya No', 'Bakiye', 'Uyap Borca İtiraz Tarihi', 'Uyap Dosya Açılış Tarihi', 'Uyap Dosya Durumu', 'Takip Türü'];
   const raporKisalt = rows => rows.map(r => { const o = {}; for (const k of RAPOR_SUTUN) if (k in r) o[k] = r[k]; return o; });
+  const OP_SUTUN = ['Müşteri No', 'Takip Dosya İd', 'Ödeme Planı/İndirim Id', 'Ödeme Planı Durumu', 'Ödeme Planı Adı', 'Ödeme Planı Giriş Tarihi', 'Ödeme Planı İptal Tarihi', 'Ödeme Planı Taksit Sayısı', 'Ödeme Planı Tahsil Taksit Sayısı', 'Ödeme Planı Geciken Taksit Sayısı', 'Sorumluluk Tipi'];
+  const opKisalt = rows => rows.map(r => { const o = {}; for (const k of OP_SUTUN) if (k in r) o[k] = r[k]; return o; });
+  const OP_EN_FAZLA_GUN = 7;
+  const gunOnce = t => t ? Math.round((Date.parse(bugun()) - Date.parse(t)) / 86400000) : 0;
+  // ödeme planı haritası (yalnızca ayıklama açıkken)
+  function opHaritasi() {
+    if (!uyg.odemePlani || !$('odeme').checked) return null;
+    const takip = uyg.rapor ? Object.fromEntries(uyg.rapor.musteriler.map(m => [m.MusteriNo, m.TakipNolar])) : {};
+    return T.odemePlaniKur(uyg.odemePlani.rows, takip);
+  }
 
   // ---------------- eklenti köprüsü ----------------
   const EK = { var: false, surum: '', bekleyen: {}, sayac: 0 };
@@ -90,7 +100,11 @@
     for (const d of liste) {
       try {
         const bayt = new Uint8Array(await d.arrayBuffer());
-        if (/\.xlsx$/i.test(d.name)) await raporAyarla(d.name, X.oku(bayt), true);
+        if (/\.xlsx$/i.test(d.name)) {
+          const rows = X.oku(bayt);
+          if (T.odemePlaniRaporuMu(rows)) { await odemePlaniAyarla(d.name, rows); notlar.push(`${d.name}: Ödeme Planı Raporu alındı (${rows.length} kayıt).`); }
+          else await raporAyarla(d.name, rows, true);
+        }
         else if (/\.csv$/i.test(d.name)) {
           const metin = metinOku(bayt); const bas = metin.replace(/^﻿/, '').split(/\r?\n/)[0] || '';
           if (/taramaTarihi/.test(bas)) {
@@ -99,7 +113,7 @@
             notlar.push(`${d.name}: ${gelen.length} kayıt tarama geçmişine eklendi (önce ${once}, şimdi ${uyg.gecmis.length}); bu dosyayı bir daha seçmeniz gerekmez.`);
           } else if (/Müşteri No/.test(bas)) await raporAyarla(d.name, T.csvOku(metin), true);
           else throw new Error('CSV ne Genel Dosya Raporu ne de tarama geçmişi gibi görünüyor.');
-        } else throw new Error('Yalnızca .xlsx (Genel Dosya Raporu) ve .csv (tarama geçmişi) dosyaları alınır.');
+        } else throw new Error('Yalnızca .xlsx (Genel Dosya Raporu, Ödeme Planı Raporu) ve .csv (tarama geçmişi) dosyaları alınır.');
       } catch (e) { hatalar.push(d.name + ': ' + hataMetni(e)); }
     }
     mesaj('rapor-durum', [...hatalar, ...notlar].join(' '), hatalar.length ? 'hata' : notlar.length ? 'iyi' : '');
@@ -110,12 +124,20 @@
     uyg.rapor = { ad, rows: kisa, musteriler: T.musterileriKur(kisa), tarih: kaydet ? bugun() : (uyg.rapor && uyg.rapor.tarih) };
     if (kaydet) await kvKoy('rapor', { ad, rows: kisa, tarih: bugun() });
   }
+  async function odemePlaniAyarla(ad, rows) {
+    const kisa = opKisalt(rows);
+    T.odemePlaniKur(kisa, {});   // biçim denetimi
+    uyg.odemePlani = { ad, rows: kisa, tarih: bugun() };
+    await kvKoy('odemePlani', uyg.odemePlani);
+  }
 
   function listeyiKur() {
     uyg.liste = null; uyg.sonuc = null;
     if (uyg.rapor) {
       const gun = Math.max(0, parseInt($('gun').value, 10) || 0);
-      uyg.liste = T.kuyrukKur({ musteriler: uyg.rapor.musteriler, gecmis: uyg.gecmis, tarih: bugun(), yenidenTaramaGun: gun, sadeceAcik: $('acik').checked });
+      let op = null;
+      try { op = opHaritasi(); } catch (e) { mesaj('rapor-durum', 'Ödeme Planı Raporu okunamadı: ' + hataMetni(e), 'hata'); }
+      uyg.liste = T.kuyrukKur({ musteriler: uyg.rapor.musteriler, gecmis: uyg.gecmis, tarih: bugun(), yenidenTaramaGun: gun, sadeceAcik: $('acik').checked, odemePlani: op });
     }
     ciz();
   }
@@ -125,6 +147,20 @@
     const r = uyg.rapor, g = uyg.gecmis;
     if (r) k.appendChild(el('div', { sinif: 'secili' }, [el('strong', { metin: 'Genel Dosya Raporu: ' }), `${r.ad} — ${r.rows.length} satır, ${r.musteriler.length} borçlu${r.tarih && r.tarih !== bugun() ? ' (' + trTarih(r.tarih) + ' tarihinde seçildi)' : ''}`,
       el('button', { type: 'button', sinif: 'kaldir', metin: '×', 'aria-label': 'Raporu kaldır', onclick: async () => { uyg.rapor = null; await kvKoy('rapor', null); listeyiKur(); } })]));
+    const op = uyg.odemePlani;
+    if (op) {
+      let yururluk = '';
+      try {
+        const h = T.odemePlaniKur(op.rows, {}); const yur = Object.keys(h).filter(m => h[m].haric);
+        yururluk = `, ${yur.length} borçluda yürürlükte plan` + (r ? ` (Genel Dosya Raporu'ndaki borçlulardan ${r.musteriler.filter(m => h[m.MusteriNo] && h[m.MusteriNo].haric).length})` : '');
+      } catch (e) { /* listeyiKur hatayı gösterir */ }
+      const yas = gunOnce(op.tarih);
+      k.appendChild(el('div', { sinif: 'secili' }, [el('strong', { metin: 'Ödeme Planı Raporu: ' }), `${op.ad} — ${op.rows.length} kayıt${yururluk}${op.tarih && op.tarih !== bugun() ? ' (' + trTarih(op.tarih) + ' tarihinde seçildi)' : ''}`,
+        el('button', { type: 'button', sinif: 'kaldir', metin: '×', 'aria-label': 'Ödeme Planı Raporunu kaldır', onclick: async () => { uyg.odemePlani = null; await kvKoy('odemePlani', null); listeyiKur(); } })]));
+      if (yas > OP_EN_FAZLA_GUN) k.appendChild(el('p', { sinif: 'not', metin: `Ödeme Planı Raporu ${yas} gün önce seçildi; yeni planlar için Galle'den güncel raporu alıp buraya bırakın.` }));
+    } else if (r) {
+      k.appendChild(el('p', { sinif: 'not', metin: 'Ödeme Planı Raporu seçilmedi; yürürlükte ödeme planı olan borçlular listeden çıkarılmıyor. Galle › Kredi Takip Raporları › Ödeme Planı Raporu ekranında Dosya Durum "Açık", Kampanya Giriş Tarihi geniş bir aralık (ör. 01.01.2010 – bugün) seçip "Dosya İsteği Oluştur"a basın; Web Talep Listesi\'nden indirdiğiniz Odeme_Plani_…xlsx dosyasını buraya bırakın.' }));
+    }
     const son = g.map(x => x.taramaTarihi).sort().pop();
     k.appendChild(el('div', { sinif: 'secili' }, [el('strong', { metin: 'Tarama geçmişi: ' }),
       g.length ? `bu tarayıcıda ${g.length} kayıt, ${new Set(g.map(x => x.musteriNo)).size} borçlu, son tarama ${trTarih(son)}` : 'bu tarayıcıda henüz kayıt yok',
@@ -272,18 +308,20 @@
       ilerleme.value = ilerleme.max;
       mesaj('analiz-durum', 'Hareketler analiz ediliyor…', 'bilgi'); await bekle();
       const tumMus = uyg.rapor ? musteriler : Object.values(musMap);
-      const r = T.analiz89({ hareketler: oku.hareketler, ekstreler: oku.ekstreler, musteriler: tumMus, raporSatirlari: uyg.rapor ? uyg.rapor.rows : [], bugun: tarih });
+      const op = opHaritasi();
+      const r = T.analiz89({ hareketler: oku.hareketler, ekstreler: oku.ekstreler, musteriler: tumMus, raporSatirlari: uyg.rapor ? uyg.rapor.rows : [], bugun: tarih, odemePlani: op, odemePlaniAdi: op ? uyg.odemePlani.ad : '' });
       mesaj('analiz-durum', 'Excel hazırlanıyor…', 'bilgi'); await bekle();
       const xlsx = await X.yaz(r.sheets);
       const raporAdi = `89-1 Analizi ${tarih}.xlsx`;
-      // geçmiş: ekstresi okunanlar "tarandı", eklentinin "ekstresi yok" dedikleri "ekstre yok"
-      const yeni = r.ozet.filter(o => o.ekstreSay > 0).map(o => ({ musteriNo: o.musteriNo, unvan: o.borclu, takipNolar: o.takip, taramaTarihi: tarih, durum: 'tarandı', ekstreSayisi: o.ekstreSay, oneri: o.oneri, puan: String(o.puan).replace('.', ','), rapor: raporAdi }));
+      // geçmiş: ekstresi okunanlar "tarandı" (ödeme planı nedeniyle ayrılanlar dahil), eklentinin "ekstresi yok" dedikleri "ekstre yok"
+      const tumOzet = [...r.ozet, ...(r.ozetPlanli || [])];
+      const yeni = tumOzet.filter(o => o.ekstreSay > 0).map(o => ({ musteriNo: o.musteriNo, unvan: o.borclu, takipNolar: o.takip, taramaTarihi: tarih, durum: 'tarandı', ekstreSayisi: o.ekstreSay, oneri: o.oneri, puan: String(o.puan).replace('.', ','), rapor: raporAdi }));
       const is = uyg.eklentiIs;
       if (is) for (const k of is.kuyruk) { const s = is.sonuc[k.no]; if (s && s.durum === 'ekstre_yok' && !yeni.some(y => y.musteriNo === k.no)) yeni.push({ musteriNo: k.no, unvan: k.unvan, takipNolar: k.takip, taramaTarihi: tarih, durum: 'ekstre yok', ekstreSayisi: 0, oneri: '', puan: '', rapor: '' }); }
       const kaydedildi = gecmisKaydet(T.gecmisBirlestir(uyg.gecmis, yeni));
       let listeXlsx = null;
       if (uyg.liste) {
-        const durum = {}; const oz = Object.fromEntries(r.ozet.map(o => [o.musteriNo, o]));
+        const durum = {}; const oz = Object.fromEntries(tumOzet.map(o => [o.musteriNo, o]));
         for (const k of uyg.liste.kuyruk) durum[k.no] = { ekstre: oz[k.no] ? oz[k.no].ekstreSay : 0, oneri: oz[k.no] ? oz[k.no].oneri : '' };
         listeXlsx = await X.yaz(T.listeSayfalari(uyg.liste, durum));
       }
@@ -301,7 +339,7 @@
     const st = s.r.stats;
     const turler = Object.entries(st.turler).slice(0, 8).map(([k, v]) => `${k}: ${v}`).join(' · ');
     const kart = el('div', { sinif: 'sonuc' }, [
-      el('h3', { metin: `${st.borclu} borçlu analiz edildi` }),
+      el('h3', { metin: `${st.borclu + (st.odemePlanli || 0)} borçlu analiz edildi` + (st.odemePlanli ? ` (${st.odemePlanli}'i ödeme planlı, ayrı sayfada)` : '') }),
       el('div', { sinif: 'rozetler' }, [
         el('span', { sinif: 'rozet a', metin: `A – Güçlü aday: ${st.A}` }), el('span', { sinif: 'rozet b', metin: `B – Olası: ${st.B}` }),
         el('span', { sinif: 'rozet c', metin: `C – Zayıf: ${st.C}` }), el('span', { sinif: 'rozet d', metin: `D – Tespit yok: ${st.D}` })
@@ -309,6 +347,7 @@
       el('ul', null, [
         el('li', { metin: `${st.ekstre} PDF: ${st.okunan} okundu, ${st.mukerrer} mükerrer, ${st.okunamayan} okunamadı${st.atlanan ? ', ' + st.atlanan + ' atlandı' : ''}; ${st.hareket} hareket (10.000 TL ve üzeri).` }),
         turler ? el('li', { metin: 'Tespit türleri (borçlu sayısı): ' + turler }) : null,
+        st.odemePlanli ? el('li', { metin: `Yürürlükte ödeme planı olan ${st.odemePlanli} borçlu adaylardan ayrıldı; Excel'de "Ödeme Planı Olanlar" sayfasında.` }) : null,
         el('li', { metin: s.kaydedildi ? `${s.yeniSay} borçlu bugünün tarihiyle tarama geçmişine kaydedildi (toplam ${s.gecmisSay} kayıt). Bu borçlular sonraki haftaların listesine alınmayacak.` : 'Tarama geçmişi tarayıcıya kaydedilemedi; aşağıdan yedeği indirin.' })
       ]),
       el('div', { sinif: 'dugmeler' }, [
@@ -357,6 +396,7 @@
     window.addEventListener('drop', e => e.preventDefault());
     $('gun').addEventListener('change', listeyiKur);
     $('acik').addEventListener('change', listeyiKur);
+    $('odeme').addEventListener('change', listeyiKur);
     $('analiz').addEventListener('click', analizEt);
     $('klasor-degistir').addEventListener('click', () => klasorSec().catch(e => { if (!e || e.name !== 'AbortError') mesaj('analiz-durum', hataMetni(e), 'hata'); }));
     $('temizle').addEventListener('click', () => {
@@ -367,6 +407,8 @@
     uyg.gecmis = gecmisYukle();
     const kayitli = await kvAl('rapor');
     if (kayitli && kayitli.rows && kayitli.rows.length) { try { uyg.rapor = { ad: kayitli.ad, rows: kayitli.rows, musteriler: T.musterileriKur(kayitli.rows), tarih: kayitli.tarih }; } catch (e) { uyg.rapor = null; } }
+    const kop = await kvAl('odemePlani');
+    if (kop && kop.rows && kop.rows.length) uyg.odemePlani = kop;
     const h = await kvAl('klasor'); if (h) uyg.klasorAdi = h.name;
     listeyiKur();
     window.postMessage({ kaynak: 'ekstre-89-1-sayfa', tip: 'merhaba' }, location.origin);

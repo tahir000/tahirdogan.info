@@ -96,14 +96,15 @@
 <main class="kap">
   <section class="adim" aria-labelledby="b-rapor">
     <div class="adim-baslik"><span class="no">1</span><h2 id="b-rapor">Genel Dosya Raporu ve bu haftanın listesi</h2></div>
-    <p class="ipucu">Genel Dosya Raporu (İcra Dosya) Excel'ini seçin; borçlu adı, takip no ve bakiye buradan alınır. Tarama geçmişi bu tarayıcıda saklanır ve her analizden sonra kendiliğinden güncellenir; son taranan borçlular listeye alınmaz. Elinizde önceden kalma bir <strong>tarama_gecmisi.csv</strong> varsa bir kez buraya bırakmanız yeterli.</p>
+    <p class="ipucu">Genel Dosya Raporu (İcra Dosya) Excel'ini seçin; borçlu adı, takip no ve bakiye buradan alınır. Galle'nin <strong>Ödeme Planı Raporu</strong>nu da bırakırsanız yürürlükte ödeme planı (Aktif/Aksama) olan borçlular listeye alınmaz ve analizde ayrı sayfaya ayrılır. Tarama geçmişi bu tarayıcıda saklanır ve her analizden sonra kendiliğinden güncellenir; son taranan borçlular listeye alınmaz. Elinizde önceden kalma bir <strong>tarama_gecmisi.csv</strong> varsa bir kez buraya bırakmanız yeterli.</p>
     <label class="birak" id="rapor-birak">
       <input type="file" id="rapor-girdi" accept=".xlsx,.csv" multiple>
-      <span><strong>Genel Dosya Raporu (.xlsx)</strong> seçin ya da buraya sürükleyin</span>
+      <span><strong>Genel Dosya Raporu (.xlsx)</strong> ve isteğe bağlı <strong>Ödeme Planı Raporu (.xlsx)</strong> seçin ya da buraya sürükleyin</span>
     </label>
     <div class="secenekler">
       <label>Yeniden tarama süresi: <input type="number" id="gun" min="0" value="90"> gün <span class="soluk">(0 = bir kez taranan bir daha alınmaz)</span></label>
       <label><input type="checkbox" id="acik" checked> Açık takip/icra dosyası olmayanları çıkar</label>
+      <label><input type="checkbox" id="odeme" checked> Yürürlükte ödeme planı olanları çıkar</label>
     </div>
     <p class="durum" id="rapor-durum" role="status"></p>
     <div id="rapor-bilgi"></div>
@@ -152,6 +153,7 @@
     <li>Maaş, düzenli şirket ödemesi, Trendyol/Uber/Martı gibi platform gelirleri, e-para (Papara, Sipay vb.), kripto (Binance TR, Paribu vb.), bahis (Nesine, Misli, TJK vb.), başka bankadaki kendi hesabı, kira, icra dosyası alacağı gibi muhatapları puanlar.</li>
     <li>Tapu, araç, yüksek tutarlı çıkış, başkasının e-para cüzdanına transfer gibi 89/1 dışı dikkat çeken hareketleri ayrıca işaretler. Emekli aylığı haczedilemediği için puana katılmaz.</li>
     <li>Tarama geçmişini bu tarayıcıda saklar; her hafta yalnızca yakın zamanda taranmamış borçluları listeler. Geçmişi istediğiniz an .csv olarak yedekleyebilirsiniz.</li>
+    <li>Ödeme Planı Raporu verilirse yürürlükte (Aktif ya da Aksama) ödeme planı olan borçluları listeye almaz; yalnızca iptal edilmiş planı olanları listede bırakıp not düşer. Plan borçlunun takip dosyalarından yalnızca birini kapsıyorsa kapsam dışındaki dosyayı belirtir.</li>
     <li>Ekstre İndirici eklentisi kuruluysa listedeki borçluların ekstrelerini banka ekranından sırayla indirir; eklenti yoksa PDF'ler elle seçilir.</li>
   </ul>
 </footer>
