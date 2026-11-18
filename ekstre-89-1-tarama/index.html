@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>Ekstre 89/1 Taraması</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f4e79'/%3E%3Cpath d='M9 10h14M9 16h14M9 22h9' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --zemin: #f3f5f8; --kart: #ffffff; --cizgi: #dce2ea; --yazi: #1c2433; --soluk: #5a6578;
+    --vurgu: #1f4e79; --vurgu-koyu: #173b5c; --vurgu-acik: #e7eff8;
+    --iyi: #1d7246; --iyi-acik: #e5f3eb; --uyari-acik: #fdf2dc; --hata: #b3261e; --hata-acik: #fbe8e6;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--zemin); color: var(--yazi); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  .kap { max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+  header.ust { background: var(--vurgu); color: #fff; padding: 22px 0 20px; }
+  header.ust a.geri { display: inline-block; margin-bottom: 8px; color: #fff; opacity: .85; font-size: 13px; text-decoration: none; }
+  header.ust a.geri:hover, header.ust a.geri:focus-visible { opacity: 1; text-decoration: underline; }
+  header.ust h1 { margin: 0 0 4px; font-size: 23px; }
+  header.ust p { margin: 0; opacity: .92; max-width: 780px; }
+  .gizlilik { display: inline-block; margin-top: 10px; padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,.14); font-size: 13px; }
+  main { padding-bottom: 30px; }
+  .adim { background: var(--kart); border: 1px solid var(--cizgi); border-radius: 10px; padding: 18px 20px; margin: 16px 0; }
+  .adim-baslik { display: flex; align-items: center; gap: 10px; }
+  .adim-baslik h2 { font-size: 17px; margin: 0; }
+  .no { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--vurgu); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; }
+  .ipucu, .soluk { color: var(--soluk); }
+  .ipucu { margin: 6px 0 12px; }
+  .birak { position: relative; display: block; border: 2px dashed #b6c2d1; border-radius: 9px; padding: 20px 16px; text-align: center; color: var(--soluk); cursor: pointer; background: #fafbfd; }
+  .birak:hover, .birak.ustunde { border-color: var(--vurgu); background: var(--vurgu-acik); color: var(--vurgu); }
+  .birak:focus-within { outline: 3px solid #9cc0e6; outline-offset: 2px; }
+  .birak input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+  .birak strong { color: var(--vurgu); }
+  .gizli { display: none; }
+  .secenekler { display: flex; flex-wrap: wrap; gap: 8px 22px; align-items: center; margin: 12px 0 0; font-size: 14px; }
+  .secenekler input[type=number] { width: 72px; font: inherit; padding: 4px 6px; border: 1px solid #c3ccd8; border-radius: 6px; }
+  .secili { margin: 8px 0 0; font-size: 14px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .durum { margin: 8px 0 0; font-size: 14px; }
+  .durum:empty { display: none; }
+  .durum.bilgi { color: var(--vurgu); }
+  .durum.iyi { color: var(--iyi); }
+  .durum.hata { color: var(--hata); font-weight: 600; }
+  button { font: inherit; border-radius: 7px; border: 1px solid #c3ccd8; background: #fff; color: var(--yazi); padding: 8px 16px; cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--vurgu); }
+  button:focus-visible { outline: 3px solid #9cc0e6; outline-offset: 1px; }
+  button.ana-dugme { background: var(--vurgu); border-color: var(--vurgu); color: #fff; font-weight: 600; }
+  button.ana-dugme:hover:not(:disabled) { background: var(--vurgu-koyu); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.kaldir { padding: 2px 9px; line-height: 1.4; color: var(--soluk); }
+  .dugmeler { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .ust-bosluk { margin-top: 12px; }
+  progress { width: 100%; height: 10px; margin-top: 10px; accent-color: var(--vurgu); }
+  .tablo-kap { overflow-x: auto; border: 1px solid var(--cizgi); border-radius: 8px; margin-top: 12px; max-height: 460px; overflow-y: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  table.kucuk { font-size: 13px; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid #e8ecf1; vertical-align: top; }
+  th { background: #f4f7fb; font-weight: 600; white-space: nowrap; position: sticky; top: 0; }
+  td.sayi { white-space: nowrap; text-align: right; }
+  tr.sinif-a td:nth-child(2) { color: var(--iyi); font-weight: 700; }
+  tr.sinif-b td:nth-child(2) { color: #8a6100; font-weight: 700; }
+  .sonuc { margin-top: 14px; border: 1px solid #bfe0cc; background: var(--iyi-acik); border-radius: 9px; padding: 14px 16px; }
+  .sonuc h3 { margin: 0 0 8px; font-size: 16px; }
+  .sonuc h4 { margin: 16px 0 0; font-size: 15px; }
+  .sonuc ul { margin: 8px 0 12px; padding-left: 20px; }
+  .sonuc .tablo-kap { background: #fff; }
+  .rozetler { display: flex; flex-wrap: wrap; gap: 8px; }
+  .rozet { padding: 3px 10px; border-radius: 12px; font-size: 13.5px; font-weight: 600; background: #fff; border: 1px solid var(--cizgi); }
+  .rozet.a { color: var(--iyi); border-color: #9fd3b4; }
+  .rozet.b { color: #8a6100; border-color: #ecd08a; }
+  .rozet.c, .rozet.d { color: var(--soluk); }
+  .not { margin: 10px 0 0; padding: 7px 10px; border-radius: 7px; background: var(--uyari-acik); color: #5d4200; font-size: 13.5px; }
+  footer.alt { color: var(--soluk); font-size: 13px; padding: 0 16px 28px; }
+  footer.alt ul { margin: 6px 0 0; padding-left: 20px; }
+  @media (max-width: 640px) { .adim { padding: 14px; } header.ust h1 { font-size: 20px; } }
+</style>
+</head>
+<body>
+<header class="ust">
+  <div class="kap">
+    <a class="geri" href="../">← Tüm projeler</a>
+    <h1>Ekstre 89/1 Taraması</h1>
+    <p>Borçluların VakıfBank mevduat ekstrelerindeki para hareketlerinden 89/1 haciz ihbarnamesi gönderilebilecek muhatapları (işveren, düzenli ödeme yapan şirket, platform, e-para, kripto, bahis şirketi, başka banka) bulur ve puanlar.</p>
+    <span class="gizlilik">Dosyalar bilgisayarınızdan çıkmaz: tüm işlem bu sayfada, tarayıcıda yapılır.</span>
+  </div>
+</header>
+
+<main class="kap">
+  <section class="adim" aria-labelledby="b-rapor">
+    <div class="adim-baslik"><span class="no">1</span><h2 id="b-rapor">Bu haftanın listesi <span class="soluk">(isteğe bağlı)</span></h2></div>
+    <p class="ipucu">Genel Dosya Raporu (İcra Dosya) Excel'ini seçin; borçlu adı, takip no ve bakiye buradan alınır. Önceki taramadan kalan <strong>tarama_gecmisi.csv</strong> dosyasını da seçerseniz son taranan borçlular bu haftanın listesine alınmaz. İkisini birlikte seçebilirsiniz.</p>
+    <label class="birak" id="rapor-birak">
+      <input type="file" id="rapor-girdi" accept=".xlsx,.csv" multiple>
+      <span><strong>Genel Dosya Raporu (.xlsx) ve tarama geçmişi (.csv)</strong> seçin ya da buraya sürükleyin</span>
+    </label>
+    <div class="secenekler">
+      <label>Yeniden tarama süresi: <input type="number" id="gun" min="0" value="90"> gün <span class="soluk">(0 = bir kez taranan bir daha alınmaz)</span></label>
+      <label><input type="checkbox" id="acik" checked> Açık takip/icra dosyası olmayanları çıkar</label>
+    </div>
+    <p class="durum" id="rapor-durum" role="status"></p>
+    <div id="rapor-bilgi"></div>
+    <div id="liste"></div>
+  </section>
+
+  <section class="adim" aria-labelledby="b-pdf">
+    <div class="adim-baslik"><span class="no">2</span><h2 id="b-pdf">Ekstre PDF'leri</h2></div>
+    <p class="ipucu">Borçluların banka sisteminden indirilen mevduat ve kredi kartı ekstre PDF'lerini seçin. Dosya adı <strong>AD SOYAD_MüşteriNo.pdf</strong> biçiminde olmalı (aynı borçlunun ek hesapları " (1)", " (2)" ekiyle). Aynı içerikteki mükerrer dosyalar bir kez sayılır.</p>
+    <label class="birak" id="pdf-birak">
+      <input type="file" id="pdf-girdi" accept=".pdf,application/pdf" multiple>
+      <span><strong>PDF ekstreleri seçin</strong> ya da buraya sürükleyin</span>
+    </label>
+    <div class="dugmeler ust-bosluk">
+      <button type="button" id="klasor-sec">Klasör seç</button>
+      <input type="file" id="klasor-girdi" class="gizli" webkitdirectory multiple>
+      <span class="soluk">Bir klasördeki tüm PDF'leri birden eklemek için.</span>
+    </div>
+    <p class="durum" id="pdf-durum" role="status"></p>
+    <div id="pdf-liste"></div>
+  </section>
+
+  <section class="adim" aria-labelledby="b-analiz">
+    <div class="adim-baslik"><span class="no">3</span><h2 id="b-analiz">Analiz et ve indir</h2></div>
+    <p class="ipucu">PDF'ler okunur, hareketler sınıflandırılır ve her borçlu için 89/1 muhatapları puanlanır. Sonuç Excel'inde aday listesi, muhataplar, dikkat çeken hareketler, tüm hareketler ve ekstre listesi ayrı sayfalardadır.</p>
+    <div class="dugmeler">
+      <button type="button" id="analiz" class="ana-dugme" disabled>Analiz et</button>
+      <button type="button" id="temizle">Baştan başla</button>
+    </div>
+    <progress id="ilerleme" hidden></progress>
+    <p class="durum" id="analiz-durum" role="status"></p>
+    <div id="sonuc" aria-live="polite"></div>
+  </section>
+</main>
+
+<footer class="kap alt">
+  <p>Ne yapar:</p>
+  <ul>
+    <li>Ekstre hareketlerinden karşı tarafı çıkarır: maaş ödeyen kurum (ad ya da maaş kurum kodu), FAST/EFT/havale gönderen kişi ve şirketler, POS, nakit yatıran kişi.</li>
+    <li>Maaş, düzenli şirket ödemesi, Trendyol/Uber/Martı gibi platform gelirleri, e-para (Papara, Sipay vb.), kripto (Binance TR, Paribu vb.), bahis (Nesine, Misli, TJK vb.), başka bankadaki kendi hesabı, kira, icra dosyası alacağı gibi muhatapları puanlar.</li>
+    <li>Tapu, araç, yüksek tutarlı çıkış, başkasının e-para cüzdanına transfer gibi 89/1 dışı dikkat çeken hareketleri ayrıca işaretler. Emekli aylığı haczedilemediği için puana katılmaz.</li>
+    <li>Tarama geçmişi ile her hafta yalnızca yakın zamanda taranmamış borçluları listeler; analizden sonra güncel geçmiş dosyasını verir.</li>
+  </ul>
+</footer>
+
+<script src="zip.js"></script>
+<script src="pdf.js"></script>
+<script src="xlsx.js"></script>
+<script src="analiz.js"></script>
+<script src="arayuz.js"></script>
+</body>
+</html>
