@@ -44,8 +44,9 @@
 
     /* 2) Başlık ve sütunlar */
     const baslik = ['Adı / Ünvanı', 'Müşteri Nosu', 'Borçlu Türü', 'SORUMLU', 'SONUÇ', 'Bakiye'];
-    eq(M.sutunlariBul(baslik), { unvan: 0, vkn: 1, sorumlu: 3, sonuc: 4 }, 'büro listesinin başlıkları tanınır');
-    eq(M.sutunlariBul(['Firma Ünvanı', 'Müşteri No', 'Vergi No', 'Sorumlu Avukat']), { unvan: 0, vkn: 2, sorumlu: 3, sonuc: -1 }, '"Vergi No", "Müşteri No"dan önce gelir');
+    eq(M.sutunlariBul(baslik), { unvan: 0, vkn: 1, sorumlu: 3, sonuc: 4, adres: -1 }, 'büro listesinin başlıkları tanınır');
+    eq(M.sutunlariBul(['Firma Ünvanı', 'Müşteri No', 'Vergi No', 'Sorumlu Avukat']), { unvan: 0, vkn: 2, sorumlu: 3, sonuc: -1, adres: -1 }, '"Vergi No", "Müşteri No"dan önce gelir');
+    eq(M.sutunlariBul(['Ünvan', 'Vergi No', 'Adres', 'SORUMLU', 'MERSİS SONUCU', 'MERSİS ADRESİ']), { unvan: 0, vkn: 1, sorumlu: 3, sonuc: 4, adres: 5 }, 'önceki çalışmanın "MERSİS ADRESİ" sütunu tanınır, listedeki "Adres" sütunu alınmaz');
     eq(M.baslikSatiriBul([['Rapor'], [], baslik, ['A', '1']]), 2, 'başlık satırı ilk satırda değilse bulunur');
 
     /* 3) Kurum türü ve benzerlik */
@@ -210,7 +211,7 @@
     girdi.files = dt.files;
     girdi.dispatchEvent(new aw.Event('change'));
     await bekleKosul(function () { return A.durum.kitap && ad.getElementById('sayfa').value === 'Liste'; }, 'araç dosyayı okur ve Liste sayfasını seçer');
-    eq([ad.getElementById('s-unvan').value, ad.getElementById('s-vkn').value, ad.getElementById('s-sorumlu').value, ad.getElementById('s-sonuc').value], ['0', '1', '3', '4'], 'araçta sütunlar tanınır');
+    eq([ad.getElementById('s-unvan').value, ad.getElementById('s-vkn').value, ad.getElementById('s-sorumlu').value, ad.getElementById('s-sonuc').value, ad.getElementById('s-adres').value], ['0', '1', '3', '4', '-2'], 'araçta sütunlar tanınır; adres için yeni sütun önerilir');
     const kisiSel = ad.getElementById('kisi');
     kisiSel.value = 'AYŞE YILMAZ'; kisiSel.dispatchEvent(new aw.Event('change'));
     ok(/8<\/b> şirket sorgulanacak/.test(ad.getElementById('liste-ozet').innerHTML), 'araçta liste özeti');
@@ -223,7 +224,17 @@
     eq([c.dosyaAdi, c.sayi], ['ornek - MERSİS AYŞE YILMAZ.xlsx', 10], 'Excel adı ve yazılan satır sayısı');
     const ls3 = X.sayfaOku(await X.kitapAc(c.bayt), 'Liste');
     eq([ls3[3][4], ls3[5][4], ls3[6][4]], ['Terkin Edilmiş', 'Ünvanla aramada birden çok kayıt çıktı – elle kontrol edin', 'Aktif'], 'araçtan üretilen Excel\'de SONUÇ');
+    eq([ls3[0][6], ls3[1][6], ls3[2][6], ls3[5][6] || '', ls3[7][6] || '', ls3[9][6] || '', ls3[11][6] || ''],
+      ['MERSİS ADRESİ', O.FIRMALAR[0].adres, O.FIRMALAR[1].adres, '', '', '', ''], 'adres yeni sütuna yazılır; bulunamayan, dernek ve öteki kişinin satırları boş kalır');
+    eq(ls3[1][5], '1500.5', 'adres sütunu eklenince Bakiye sütunu yerinde kalır');
     await kaydet('mersis-arac-cikti.xlsx', c.bayt);
+
+    /* Adres yazılmasın seçilince adres sütunu açılmaz */
+    const adresSel = ad.getElementById('s-adres');
+    adresSel.value = '-1'; adresSel.dispatchEvent(new aw.Event('change'));
+    sk.value = sonucMetni; sk.dispatchEvent(new aw.Event('input'));
+    const c2 = await A.excelOlustur();
+    eq((X.sayfaOku(await X.kitapAc(c2.bayt), 'Liste')[0] || []).length, 6, '"adres yazılmasın" seçilince yeni sütun açılmaz');
     a.remove();
   } catch (e) {
     kalan++;
