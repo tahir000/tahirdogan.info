@@ -13,7 +13,8 @@
 
   const d = {
     dosyaAdi: '', kitap: null, sayfaAdi: '', satirlar: [], baslikSatiri: 0,
-    sutunlar: { unvan: -1, vkn: -1, sorumlu: -1, sonuc: -1 }, kisi: '', liste: null, sonuc: null
+    /* adres: -2 = sona yeni "MERSİS ADRESİ" sütunu, -1 = yazılmaz, 0+ = seçilen sütun */
+    sutunlar: { unvan: -1, vkn: -1, sorumlu: -1, sonuc: -1, adres: -2 }, kisi: '', liste: null, sonuc: null
   };
 
   function durum(id, metin, tur) { const e = $(id); e.textContent = metin || ''; e.className = 'durum' + (tur ? ' ' + tur : ''); }
@@ -82,7 +83,10 @@
   function sutunlariKur(otomatik) {
     const baslik = d.satirlar[d.baslikSatiri] || [];
     const enGenis = d.satirlar.slice(0, 200).reduce(function (m, s) { return Math.max(m, s.length); }, baslik.length);
-    if (otomatik) d.sutunlar = M.sutunlariBul(baslik);
+    if (otomatik) {
+      d.sutunlar = M.sutunlariBul(baslik);
+      if (d.sutunlar.adres < 0) d.sutunlar.adres = -2;
+    }
     const liste = [];
     for (let i = 0; i < Math.max(enGenis, 1); i++) {
       liste.push({ deger: i, ad: X.sutunAdi(i + 1) + (baslik[i] ? ' – ' + String(baslik[i]).slice(0, 40) : '') });
@@ -92,6 +96,7 @@
     secenekler($('s-vkn'), [{ deger: -1, ad: '(yok – ünvanla ara)' }].concat(liste), d.sutunlar.vkn);
     secenekler($('s-sorumlu'), yok.concat(liste), d.sutunlar.sorumlu);
     secenekler($('s-sonuc'), [{ deger: -1, ad: '(sona yeni sütun ekle: MERSİS SONUCU)' }].concat(liste), d.sutunlar.sonuc);
+    secenekler($('s-adres'), [{ deger: -2, ad: '(sona yeni sütun ekle: MERSİS ADRESİ)' }, { deger: -1, ad: '(adres yazılmasın)' }].concat(liste), d.sutunlar.adres);
     adimAc('adim-sutun', true);
     sutunKontrol();
   }
@@ -108,8 +113,9 @@
       adimAc('adim-sonuc', false);
       return;
     }
-    const cakisan = s.sonuc >= 0 && [s.unvan, s.vkn, s.sorumlu].indexOf(s.sonuc) >= 0;
-    durum('sutun-durum', cakisan ? 'Sonuç sütunu öteki sütunlardan biriyle aynı; başka bir sütun seçin.' :
+    const cakisan = (s.sonuc >= 0 && [s.unvan, s.vkn, s.sorumlu].indexOf(s.sonuc) >= 0) ||
+      (s.adres >= 0 && [s.unvan, s.vkn, s.sorumlu, s.sonuc].indexOf(s.adres) >= 0);
+    durum('sutun-durum', cakisan ? 'Sonuç ya da adres sütunu öteki sütunlardan biriyle aynı; başka bir sütun seçin.' :
       veriSatiri + ' veri satırı. ' + (s.vkn < 0 ? 'Vergi numarası sütunu seçilmedi; tüm şirketler ünvanla aranacak.' : ''), cakisan ? 'hata' : 'bilgi');
     if (cakisan) { adimAc('adim-kisi', false); return; }
     kisileriKur();
@@ -120,7 +126,7 @@
     const n = Math.max(1, Math.min(parseInt(this.value, 10) || 1, d.satirlar.length || 1));
     this.value = n; d.baslikSatiri = n - 1; sutunlariKur(true);
   });
-  [['s-unvan', 'unvan'], ['s-vkn', 'vkn'], ['s-sorumlu', 'sorumlu'], ['s-sonuc', 'sonuc']].forEach(function (p) {
+  [['s-unvan', 'unvan'], ['s-vkn', 'vkn'], ['s-sorumlu', 'sorumlu'], ['s-sonuc', 'sonuc'], ['s-adres', 'adres']].forEach(function (p) {
     $(p[0]).addEventListener('change', function () { d.sutunlar[p[1]] = parseInt(this.value, 10); sutunKontrol(); });
   });
 
@@ -273,33 +279,40 @@
     notlar.forEach(function (n) { const p = document.createElement('p'); p.className = 'not' + (n[0] ? ' ' + n[0] : ''); p.textContent = n[1]; not.appendChild(p); });
 
     const bas = document.createElement('tr');
-    ['Satır', 'Ünvan', 'Vergi no', 'SONUÇ'].forEach(function (h) { hucre(bas, h, '', 'th'); });
+    ['Satır', 'Ünvan', 'Vergi no', 'SONUÇ', 'MERSİS adresi'].forEach(function (h) { hucre(bas, h, '', 'th'); });
     tablo.appendChild(bas);
     k.forEach(function (s) {
       const tr = document.createElement('tr');
       const sinif = M.sonucSinifi(s);
       if (sinif) tr.className = sinif;
-      hucre(tr, s.r, 'no-h'); hucre(tr, s.n); hucre(tr, s.v); hucre(tr, M.sonucMetni(s));
+      hucre(tr, s.r, 'no-h'); hucre(tr, s.n); hucre(tr, s.v); hucre(tr, M.sonucMetni(s)); hucre(tr, adresi(s));
       tablo.appendChild(tr);
     });
     $('sonuc-kap').classList.toggle('gizli', !k.length);
     $('indir').disabled = !k.length;
   }
 
+  /* Firma bulunduysa MERSİS'teki adresi */
+  function adresi(s) { return s.sorgu === 'OK' ? (s.adres || '') : ''; }
+
   /* Sonuçları yazılmış Excel'i üretir (indirmeden) */
   async function excelOlustur() {
     const k = kayitlar();
     if (!k.length || !d.kitap) throw new Error('Yazılacak sonuç yok.');
     const bas = d.baslikSatiri + 1;
-    let sutun = d.sutunlar.sonuc + 1;
+    let sonSutun = d.satirlar.reduce(function (m, s) { return Math.max(m, s.length); }, 0);
     const hucreler = [];
-    if (d.sutunlar.sonuc < 0) {
-      const enGenis = d.satirlar.reduce(function (m, s) { return Math.max(m, s.length); }, 0);
-      sutun = enGenis + 1;
-      hucreler.push({ satir: bas, sutun: sutun, deger: 'MERSİS SONUCU', stilKaynagi: sutun > 1 ? { satir: bas, sutun: sutun - 1 } : null });
-    }
+    const yeniSutun = function (baslik) {
+      const n = ++sonSutun;
+      hucreler.push({ satir: bas, sutun: n, deger: baslik, stilKaynagi: n > 1 ? { satir: bas, sutun: n - 1 } : null });
+      return n;
+    };
+    const sutun = d.sutunlar.sonuc >= 0 ? d.sutunlar.sonuc + 1 : yeniSutun('MERSİS SONUCU');
+    const adresSutun = d.sutunlar.adres >= 0 ? d.sutunlar.adres + 1 : d.sutunlar.adres === -2 ? yeniSutun('MERSİS ADRESİ') : 0;
     k.forEach(function (s) {
       hucreler.push({ satir: s.r, sutun: sutun, deger: M.sonucMetni(s), dolgu: RENK[M.sonucSinifi(s)] || null });
+      /* Adres yalnız firma bulunduysa yazılır; seçilen sütundaki öteki değerler silinmez */
+      if (adresSutun && adresi(s)) hucreler.push({ satir: s.r, sutun: adresSutun, deger: adresi(s) });
     });
     const satirlar = [M.DETAY_BASLIKLARI].concat(k.map(M.detaySatiri));
     const dolgular = [null].concat(k.map(function (s) { return RENK[M.sonucSinifi(s)] || null; }));

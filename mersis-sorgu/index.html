@@ -90,7 +90,7 @@
   <div class="kap">
     <a class="geri" href="../">← Tüm projeler</a>
     <h1>MERSİS Şirket Sorgulama</h1>
-    <p>Borçlu listesindeki şirketleri sorumlu kişiye göre MERSİS'te sorgular: şirket aktif mi, tasfiye halinde mi, terkin mi edilmiş, konkordato ya da iflas kaydı var mı. Sonuçlar Excel'deki SONUÇ sütununa ve ayrıntılı bir sayfaya yazılır.</p>
+    <p>Borçlu listesindeki şirketleri sorumlu kişiye göre MERSİS'te sorgular: şirket aktif mi, tasfiye halinde mi, terkin mi edilmiş, konkordato ya da iflas kaydı var mı, MERSİS'teki adresi ne. Sonuçlar Excel'deki SONUÇ ve adres sütunlarına ve ayrıntılı bir sayfaya yazılır.</p>
     <span class="gizlilik">Excel bilgisayarınızdan çıkmaz: okuma ve yazma bu sayfada, tarayıcıda yapılır.</span>
   </div>
 </header>
@@ -116,6 +116,7 @@
       <label class="alan">Vergi numarası<select id="s-vkn"></select></label>
       <label class="alan">Sorumlu<select id="s-sorumlu"></select></label>
       <label class="alan">Sonucun yazılacağı sütun<select id="s-sonuc"></select></label>
+      <label class="alan">MERSİS adresinin yazılacağı sütun<select id="s-adres"></select></label>
     </div>
     <p class="durum" id="sutun-durum" role="status"></p>
   </section>
@@ -169,7 +170,8 @@
   <ul>
     <li>Seçilen sorumlunun satırlarını alır; vergi numarasını kontrol hanesinden geçirir, geçersizse şirketi ünvanla aratır.</li>
     <li>MERSİS'te firma durumunu (Aktif, Tasfiye Halinde, Terkin Edilmiş), kuruluş tarihi, MERSİS ve sicil numarasını, sicil müdürlüğünü, adresi ve konkordato/iflas kayıtlarını okur.</li>
-    <li>İndirilen Excel'de yalnız SONUÇ hücreleri değişir ve "MERSİS" adlı yeni bir ayrıntı sayfası eklenir; öteki sayfalar, biçimler ve formüller olduğu gibi kalır. Konkordato/iflas turuncu, terkin ve tasfiye kırmızı, bulunamayan ve sorgulanmayanlar gri boyanır.</li>
+    <li>Firmanın MERSİS'teki adresi, SONUÇ'un yanına açılan "MERSİS ADRESİ" sütununa yazılır (isterseniz başka bir sütun seçebilir ya da kapatabilirsiniz). Listedeki kendi adres sütununuza dokunulmaz.</li>
+    <li>İndirilen Excel'de yalnız SONUÇ ve adres hücreleri değişir ve "MERSİS" adlı yeni bir ayrıntı sayfası eklenir; öteki sayfalar, biçimler ve formüller olduğu gibi kalır. Konkordato/iflas turuncu, terkin ve tasfiye kırmızı, bulunamayan ve sorgulanmayanlar gri boyanır.</li>
     <li>Güvenlik kodunu çözmez ve kendiliğinden sorgu göndermez; her sorguyu siz başlatırsınız.</li>
   </ul>
 </footer>

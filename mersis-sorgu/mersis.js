@@ -54,6 +54,8 @@
     unvan: [/UNVAN/, /^ADI$/, /^BORCLU( ADI)?$/, /^FIRMA( ADI)?$/, /^SIRKET( ADI)?$/],
     vkn: [/VERGI/, /\bVKN\b/, /MUSTERI NO/],
     sorumlu: [/SORUMLU/],
+    /* Yalnız aracın daha önce açtığı "MERSİS ADRESİ" sütunu tanınır; listedeki başka adres sütunlarına yazılmaz */
+    adres: [/MERSIS ADRES/],
     sonuc: [/SONUC/, /MERSIS/]
   };
 
@@ -78,7 +80,7 @@
 
   /* Başlık satırından sütun eşleşmesini çıkarır. Sütunlar 0'dan sayılır; bulunamayan -1. */
   function sutunlariBul(baslik) {
-    const s = { unvan: -1, vkn: -1, sorumlu: -1, sonuc: -1 };
+    const s = { unvan: -1, vkn: -1, sorumlu: -1, sonuc: -1, adres: -1 };
     (baslik || []).forEach(function (h, i) {
       const tur = sutunTuru(h);
       if (!tur) return;
