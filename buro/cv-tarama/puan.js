@@ -152,11 +152,15 @@ burosu partner sirketi ltd tipi fatura no numarasi danismanlik holding group gru
 
   function bestName(text, email, header) {
     const cands = [];
-    const m = text.match(/(?:ad[ıi]?\s*soyad[ıi]?|ad\s*-\s*soyad|isim)\s*[:-]\s*([^\n]{4,40})/i);
+    const m = text.match(/(?:ad[ıi]?\s*soyad[ıi]?|ad\s*-\s*soyad|[iİ]sim)\s*[:\-–—]\s*([^\n]{4,40})/i);
     if (m) cands.push([10, m[1].trim()]);
     for (const line of text.split('\n').slice(0, 30).map(x => strip(x, ' :•|*-–—\t'))) {
       let s = line.replace(/^(av\.|stj\.|dr\.)\s*|^(avukat|stajyer|av|stj|dr)\s+/i, '').trim().replace(/\s{2,}/g, ' ');
       if (s.length >= 5 && s.length <= 40) { const v = looksName(s, email); if (v) cands.push([v, s]); }
+      // Satırın içindeki ad (OCR ve yan yana sütunlar): yalnız e-postayla örtüşürse sayılır
+      if (email) for (const mm of line.matchAll(/[A-ZÇĞİÖŞÜ][A-Za-zÇĞİÖŞÜçğıöşü']+(?: +[A-ZÇĞİÖŞÜ][A-Za-zÇĞİÖŞÜçğıöşü']+){1,3}/g)) {
+        if (mm[0] === s) continue; const v = looksName(mm[0], email); if (v >= 6) cands.push([v, mm[0]]);
+      }
     }
     if (cands.length) {
       let en = cands[0]; for (const c of cands) if (c[0] > en[0]) en = c;
@@ -192,6 +196,7 @@ burosu partner sirketi ltd tipi fatura no numarasi danismanlik holding group gru
     desteksiz: 'Bu dosya türü okunamıyor. Dosyayı açıp elle puanlayın',
     taranmis: 'Taranmış PDF; metin yok. Dosyayı açıp elle puanlayın'
   };
+  const OCR_NOTU = 'Görsel ya da taranmış CV, OCR ile okundu; doğruluğu düşük, CV\'yi açıp teyit edin';
 
   // kayitlar: [{idx, konu, kimden, govde, icMailler:[{kimden}], ekler:[{ad, boy, metin, durum, kimlik}]}]
   const adiAl = k => ((k || '').match(/^\s*"?([^"<@]+?)"?\s*</) || [])[1] || '';
@@ -228,7 +233,7 @@ burosu partner sirketi ltd tipi fatura no numarasi danismanlik holding group gru
       if (toplam === 0) {
         const d = c.durum === 'tamam' && c.chars < 150 && /\.pdf$/i.test(c.dosya) ? 'taranmis' : c.durum;
         not = DURUM_NOTU[d] || 'CV eki yok ya da okunamadı; değerlendirilemedi';
-      }
+      } else if (c.durum === 'ocr') not = OCR_NOTU;
       const ph = (c.text + ' ' + c.body).match(/(?:\+?90[ -]?)?\(?0?5\d{2}\)?[ -]?\d{3}[ -]?\d{2}[ -]?\d{2}/);
       const ed = [...c.text.matchAll(/[^\n]{0,70}(?:[Üü]niversite|Fak[üu]lte|Y[üu]ksekokul|Anadolu Lisesi|Açık ?[Öö]ğretim|University|Lise)[^\n]{0,45}/g)].slice(0, 2)
         .map(x => strip(bosluk(x[0]), ' :|•-'));

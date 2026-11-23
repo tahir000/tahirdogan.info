@@ -28,6 +28,13 @@
     eq(G.Belge.metin('x.jpeg', new Uint8Array(2000)).durum, 'gorsel', 'görsel CV okunamaz olarak işaretlenir');
     eq(G.Belge.metin('x.pdf', new TextEncoder().encode('%PDF-1.4\n1 0 obj\n<< >>\nendobj\ntrailer << /Root 1 0 R /Encrypt 5 0 R >>')).durum, 'sifreli', 'şifreli PDF tanınır');
 
+    // Taranmış PDF: sayfadaki büyük görüntü OCR için çıkarılır (sıkıştırmasız, gri, 600x500)
+    const gor = (() => { const w = 600, h = 500, n = w * h; const bas = `%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /Resources << /XObject << /Im1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${w} /Height ${h} /ColorSpace /DeviceGray /BitsPerComponent 8 /Length ${n} >>\nstream\n`;
+      const son = '\nendstream\nendobj\n5 0 obj\n<< /Length 30 >>\nstream\nq 600 0 0 500 0 0 cm /Im1 Do Q\nendstream\nendobj\ntrailer << /Root 1 0 R >>\n';
+      const a = new TextEncoder().encode(bas), b = new Uint8Array(n).fill(200), c = new TextEncoder().encode(son); return G.Zip.birlestir([a, b, c]); })();
+    eq(G.PdfMetin.goruntuler(gor).map(g => [g.tur, g.w, g.h, g.kanal, g.veri.length]), [['ham', 600, 500, 1, 300000]], 'taranmış PDF\'ten sayfa görüntüsü çıkarılır');
+    eq(G.PdfMetin.goruntuler(o.avPdf), [], 'metinli PDF\'te OCR görüntüsü yok');
+
     /* 2) E-posta */
     const m = G.Eml.oku(o.dosyalar[0].veri);
     eq(m.konu, 'Fwd: Avukat ilanı başvurusu', 'RFC 2047 konu çözülür');
@@ -43,6 +50,15 @@
     eq([t.sayac.mail, t.sayac.tekilMail, t.sayac.dogrudan], [6, 5, 1], 'zip içindeki mailler sayılır, aynı mail bir kez işlenir');
     eq(t.sayac.ek, 5, 'ekler: PDF, DOCX, görsel, fatura ve doğrudan PDF');
     eq(t.okunamayan.map(x => x.ad + ':' + x.durum), ['IMG_0001.jpeg:gorsel', 'fatura.pdf:metinsiz'], 'okunamayanlar: görsel ve metni çok kısa fatura');
+
+    // OCR verilince görsel CV okunur (OCR yerine sahte okuyucu)
+    const sahteOcr = async g => g.tur === 'dosya' ? 'Görsel Aday\ngorsel.aday@ornek.test\nAçık Öğretim Lisesi\n2016 - 2024 Örnek Hukuk Bürosu sekreter, evrak arşiv ve dosyalama\nGörevler: randevu takibi, yazışmalar, telefon karşılama\nExcel MS Office' : '';
+    const t2 = await G.Tarama.calistir(o.dosyalar, null, { ocr: sahteOcr });
+    eq([t2.sayac.ocr, t2.okunamayan.map(x => x.durum)], [1, ['metinsiz']], 'OCR ile görsel CV okunur, okunamayan yalnız fatura');
+    const g2 = P.adaylar(t2.kayitlar).find(x => x.dosya === 'IMG_0001.jpeg') || {};
+    ok(g2.toplam > 0 && /OCR ile okundu/.test(g2.not), 'OCR ile okunan CV puanlanır ve notla işaretlenir');
+    eq(P.bestName('KİŞİSEL\nİsim — Aytuğ Deneme\n', '', ''), 'Aytuğ Deneme', 'uzun çizgili "İsim —" alanı (OCR)');
+    eq(P.bestName('NA po t AYSUN ÖRNEK\nSekreter', 'aysunornek@x.test', ''), 'Aysun Örnek', 'satır içindeki ad e-postayla eşleşince alınır');
 
     /* 4) Puanlama */
     const a = P.adaylar(t.kayitlar);
@@ -89,6 +105,16 @@
     ok(td.decode(z.al('xl/worksheets/sheet1.xml')).includes('Örnek Büro: CV Değerlendirme Raporu'), 'özet başlığı');
     const yeniden = [{ ...av, oncelik: '' }, { ...av, ad: 'B', toplam: 10, oncelik: 'Referans' }];
     eq(G.Rapor.sirala(yeniden).map(q => q.ad), ['B', 'Deniz Örnek'], 'öncelikli aday puanı düşük olsa da başta');
+    /* 7) Gerçek OCR motoru (yalnız tarayıcıda): tuvale yazılan Türkçe metin okunur */
+    if (typeof document !== 'undefined' && G.Ocr) {
+      const c = document.createElement('canvas'); c.width = 1400; c.height = 360; const x = c.getContext('2d');
+      x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.fillStyle = '#000'; x.font = '56px Arial, sans-serif';
+      x.fillText('Deniz Örnek', 60, 110); x.fillText('Hukuk Fakültesi, İstanbul Barosu', 60, 200); x.fillText('Çağrı merkezi, şikayet, ğ ı ş ü', 60, 290);
+      const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+      const okunan = await G.Ocr.oku({ tur: 'dosya', ad: 'ornek.png', veri: new Uint8Array(await blob.arrayBuffer()) });
+      await G.Ocr.kapat();
+      ok(/Deniz Örnek/.test(okunan) && /Hukuk Fakültesi/.test(okunan) && /İstanbul Barosu/.test(okunan) && /Çağrı merkezi/.test(okunan), 'OCR Türkçe harfleri okur: ' + okunan.replace(/\s+/g, ' ').trim());
+    }
   } catch (e) {
     kalan++; cikti.push('HATA  beklenmeyen: ' + (e && e.stack || e));
   }

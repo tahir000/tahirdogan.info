@@ -33,7 +33,7 @@
     // Sıkıştırılmış nesne akışları: içlerindeki nesneler düz metinde görünmez
     for (const k of Object.keys(objs)) {
       const o = objs[k]; if (!/\/Type\s*\/ObjStm\b/.test(o.dict)) continue;
-      const d = streamData(o); if (!d || !d.length) continue;
+      let d = streamData(o); if (!d || !d.length) continue;
       const n = +((o.dict.match(/\/N\s+(\d+)/) || [])[1] || 0), first = +((o.dict.match(/\/First\s+(\d+)/) || [])[1] || 0);
       const t = latin1(d); const bas = t.slice(0, first).trim().split(/\s+/).map(Number);
       for (let i = 0; i < n && 2 * i + 1 < bas.length; i++) {
@@ -276,5 +276,56 @@
     }
     return extract(buf).map(p => p.lines.map(l => l.text).join('\n')).join('\n');
   }
-  globalThis.PdfMetin = { extract, metin };
+  // Taranmış PDF'ler için: her sayfadaki en büyük görüntü (OCR'a verilecek).
+  // -> [{tur:'jpeg', veri}] ya da [{tur:'ham', w, h, kanal:1|3, veri}] ; JPX/CCITT/JBIG2 atlanır
+  // PNG öngörücüsü (/Predictor 10-15): her satır bir filtre baytıyla başlar
+  function pngCoz(d, satir, bpp, h) {
+    const out = new Uint8Array(satir * h); let p = 0;
+    for (let y = 0; y < h && p < d.length; y++) {
+      const f = d[p++]; const o = y * satir, u = o - satir;
+      for (let x = 0; x < satir; x++) {
+        const a = x >= bpp ? out[o + x - bpp] : 0, b = y ? out[u + x] : 0, c = y && x >= bpp ? out[u + x - bpp] : 0; let v = d[p++] || 0;
+        if (f === 1) v += a; else if (f === 2) v += b; else if (f === 3) v += (a + b) >> 1;
+        else if (f === 4) { const pa = Math.abs(b - c), pb = Math.abs(a - c), pc = Math.abs(a + b - 2 * c); v += pa <= pb && pa <= pc ? a : pb <= pc ? b : c; }
+        out[o + x] = v & 255;
+      }
+    }
+    return out;
+  }
+  function goruntuler(buf, enCok) {
+    const objs = parseObjects(buf); const out = [];
+    const sayi = (d, k) => { const m = d.match(new RegExp('/' + k + '\\s+(\\d+)(\\s+\\d+\\s+R)?')); if (!m) return null; if (m[2]) { const o = objs[+m[1]]; return o ? parseInt(o.dict.trim()) : null; } return +m[1]; };
+    const topla = (res, derinlik, liste) => {
+      const xd = resolveDict(objs, res, 'XObject');
+      for (const m of xd.matchAll(/\/[^\s\/<>\[\]]+\s+(\d+)\s+\d+\s+R/g)) {
+        const o = objs[+m[1]]; if (!o) continue;
+        if (/\/Subtype\s*\/Image/.test(o.dict)) liste.push(o);
+        else if (/\/Subtype\s*\/Form/.test(o.dict) && derinlik < 4) topla(resolveDict(objs, o.dict, 'Resources'), derinlik + 1, liste);
+      }
+    };
+    for (const p of pageList(objs).slice(0, enCok || 2)) {
+      const liste = []; topla(resolveDict(objs, p.dict, 'Resources'), 0, liste);
+      liste.sort((a, b) => (sayi(b.dict, 'Width') * sayi(b.dict, 'Height')) - (sayi(a.dict, 'Width') * sayi(a.dict, 'Height')));
+      const o = liste[0]; if (!o) continue;
+      const w = sayi(o.dict, 'Width'), h = sayi(o.dict, 'Height'); if (!w || !h || w * h < 250000) continue; // küçük görsel: logo ya da fotoğraf
+      if (/JPXDecode|CCITTFaxDecode|JBIG2Decode/.test(o.dict)) continue;
+      let d = streamData(o); if (!d || !d.length) continue;
+      if (/DCTDecode/.test(o.dict)) { out.push({ tur: 'jpeg', veri: d }); continue; }
+      const bpc = sayi(o.dict, 'BitsPerComponent') || 8;
+      let kanal = /DeviceRGB|CalRGB/.test(o.dict) ? 3 : /DeviceGray|CalGray/.test(o.dict) ? 1 : 0;
+      if (!kanal) { const cs = o.dict.match(/\/ColorSpace\s*(\d+)\s+\d+\s+R/); const c = cs && objs[+cs[1]] ? objs[+cs[1]].dict : ''; const icc = c.match(/\/ICCBased\s+(\d+)\s+\d+\s+R/); const n = icc && objs[+icc[1]] ? sayi(objs[+icc[1]].dict, 'N') : (/DeviceRGB/.test(c) ? 3 : /DeviceGray/.test(c) ? 1 : 0); kanal = n === 3 ? 3 : n === 1 ? 1 : 0; }
+      if (!kanal || (bpc !== 8 && !(bpc === 1 && kanal === 1))) continue;
+      const pred = sayi(o.dict, 'Predictor') || 1;
+      if (pred >= 10) d = pngCoz(d, bpc === 1 ? Math.ceil(w / 8) : w * kanal, bpc === 1 ? 1 : kanal, h);
+      if (bpc === 1) { // 1 bit siyah-beyaz tarama -> 8 bit gri
+        const satir = Math.ceil(w / 8), g = new Uint8Array(w * h); const ters = /\/Decode\s*\[\s*1\s+0\s*\]/.test(o.dict);
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const bit = (d[y * satir + (x >> 3)] >> (7 - (x & 7))) & 1; g[y * w + x] = (bit ^ (ters ? 1 : 0)) ? 255 : 0; }
+        out.push({ tur: 'ham', w, h, kanal: 1, veri: g }); continue;
+      }
+      if (d.length < w * h * kanal) continue;
+      out.push({ tur: 'ham', w, h, kanal, veri: d.subarray(0, w * h * kanal) });
+    }
+    return out;
+  }
+  globalThis.PdfMetin = { extract, metin, goruntuler };
 })();

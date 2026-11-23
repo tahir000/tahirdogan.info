@@ -54,15 +54,29 @@
       durum('durum', 'Dosyalar okunuyor…', 'bilgi');
       const girdiler = [];
       for (const f of secilen) girdiler.push({ ad: f.name, yol: f.webkitRelativePath || f.name, veri: new Uint8Array(await f.arrayBuffer()) });
-      const t = await globalThis.Tarama.calistir(girdiler, (i, n, ad) => { ilerleme.max = n; ilerleme.value = i; durum('durum', `${i} / ${n} işlendi: ${ad}`, 'bilgi'); });
+      // OCR motoru ilk görselde hazırlanır; hazırlanamazsa bir kez denenir, sonra kapalı kalır
+      let ocr = null, ocrHatasi = '';
+      if ($('ocr-ac').checked && globalThis.Ocr) {
+        let hazir = false, bozuk = false;
+        ocr = async g => {
+          if (bozuk) throw new Error('OCR kapalı');
+          if (!hazir) {
+            durum('durum', 'OCR motoru hazırlanıyor (ilk seferde 13 MB iner)…', 'bilgi');
+            try { await globalThis.Ocr.hazirla(); hazir = true; } catch (e) { bozuk = true; ocrHatasi = String(e && e.message || e); throw e; }
+          }
+          return globalThis.Ocr.oku(g);
+        };
+      }
+      const t = await globalThis.Tarama.calistir(girdiler, (i, n, ad) => { ilerleme.max = n; ilerleme.value = i; durum('durum', `${i} / ${n} işlendi: ${ad}`, 'bilgi'); }, { ocr });
+      if (globalThis.Ocr) globalThis.Ocr.kapat();
       durum('durum', 'Adaylar puanlanıyor…', 'bilgi');
       await new Promise(r => setTimeout(r, 0));
       const adaylar = P.adaylar(t.kayitlar);
-      adaylar.forEach((o, i) => { o.id = i; o.ilk = { s: o.s.slice(), kat: o.kat, ad: o.ad }; });
+      adaylar.forEach((o, i) => { o.id = i; o.ilk = { s: o.s.slice(), kat: o.kat, ad: o.ad, not: o.not }; });
       sonuc = { adaylar, ekler: t.ekler, sayac: t.sayac, okunamayan: t.okunamayan };
       aktif = P.KATLAR.find(k => adaylar.some(o => o.kat === k)) || P.KATLAR[0]; seciliAday = null;
       ilerleme.hidden = true;
-      durum('durum', `Tamam: ${adaylar.length} tekil aday bulundu.`, 'iyi');
+      durum('durum', `Tamam: ${adaylar.length} tekil aday bulundu${t.sayac.ocr ? `, ${t.sayac.ocr} görsel ya da taranmış CV OCR ile okundu` : ''}.${ocrHatasi ? ' OCR çalışmadı: ' + ocrHatasi : ''}`, ocrHatasi ? 'hata' : 'iyi');
       goster();
       $('sonuc-bolum').hidden = false; $('indir-bolum').hidden = false;
       $('sonuc-bolum').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -83,6 +97,7 @@
       ...(s.dogrudan ? [r(s.dogrudan, 'doğrudan dosya')] : []),
       r(s.ek, 'ek dosya'), r(a.length, 'tekil aday'),
       r(a.filter(o => o.toplam >= 75).length, 'öncelikli (75+)'),
+      ...(s.ocr ? [r(s.ocr, 'OCR ile okunan')] : []),
       r(a.filter(o => o.toplam === 0).length, 'değerlendirilemedi'),
       r(a.filter(o => o.manuel).length, 'manuel incelendi'));
   }
@@ -91,7 +106,7 @@
     if (!l.length) return;
     const ad = { gorsel: 'fotoğraf/görsel', sifreli: 'şifreli PDF', metinsiz: 'metin yok (taranmış olabilir)', hata: 'okunamadı', desteksiz: 'desteklenmeyen tür' };
     kutu.append(el('details', {}, el('summary', { metin: `Metni okunamayan ${l.length} dosya` }),
-      el('p', { sinif: 'soluk', metin: 'Bu dosyalar adaylar arasında 0 puanla (CV değilse hiç) yer alır. Görsel ve taranmış CV\'leri satıra tıklayıp açın, elle puanlayın.' }),
+      el('p', { sinif: 'soluk', metin: 'Bu dosyalar adaylar arasında 0 puanla (CV değilse hiç) yer alır. Satıra tıklayıp dosyayı açın, elle puanlayın.' }),
       el('ul', { sinif: 'okunamayan' }, l.map(x => el('li', { metin: `${x.ad}: ${ad[x.durum] || x.durum}` })))));
   }
   function sekmeler() {
@@ -148,7 +163,7 @@
     const kaydet = () => {
       const yeni = puan.map((x, i) => Math.max(0, Math.min(MAKS[i], Math.round(+x.value || 0))));
       const puanDegisti = yeni.some((v, i) => v !== o.s[i]);
-      if (puanDegisti && !not.value.trim()) {
+      if (puanDegisti && (!not.value.trim() || not.value.trim() === o.ilk.not)) {
         uyari.replaceChildren(el('p', { sinif: 'uyari hata', metin: 'Puanı değiştirdiyseniz neyi neden değiştirdiğinizi Not alanına yazın; tabloyu okuyan diğer kişiler bunu görür.' }));
         not.focus(); return;
       }
@@ -159,7 +174,7 @@
       goster(); durum('indir-durum', `${o.ad} kaydedildi.`, 'iyi');
     };
     const geriAl = () => {
-      o.s = o.ilk.s.slice(); o.toplam = o.s.reduce((a, b) => a + b, 0); o.kat = o.ilk.kat; o.ad = o.ilk.ad; o.manuel = false; o.oncelik = '';
+      o.s = o.ilk.s.slice(); o.toplam = o.s.reduce((a, b) => a + b, 0); o.kat = o.ilk.kat; o.ad = o.ilk.ad; o.not = o.ilk.not; o.manuel = false; o.oncelik = '';
       aktif = o.kat; goster();
     };
 
@@ -167,7 +182,8 @@
     let onizleme;
     if (ek && globalThis.Belge.GORSEL.test(ek.ad) && /\.(jpe?g|png|gif|webp)$/i.test(ek.ad)) {
       const url = URL.createObjectURL(new Blob([ek.veri], { type: /\.png$/i.test(ek.ad) ? 'image/png' : 'image/jpeg' })); nesneUrl.push(url);
-      onizleme = el('img', { src: url, alt: 'CV görseli: ' + ek.ad, sinif: 'cv-gorsel' });
+      onizleme = el('div', {}, el('img', { src: url, alt: 'CV görseli: ' + ek.ad, sinif: 'cv-gorsel' }),
+        o.metin ? el('pre', { sinif: 'cv-metin', style: 'margin-top:8px', metin: 'OCR ile okunan metin:\n\n' + o.metin.slice(0, 12000) }) : null);
     } else {
       onizleme = el('pre', { sinif: 'cv-metin', metin: (o.metin || '').slice(0, 12000) || '(metin yok)' });
     }

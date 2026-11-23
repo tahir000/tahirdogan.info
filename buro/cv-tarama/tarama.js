@@ -1,5 +1,7 @@
 /* Seçilen dosyaları açar: zip (iç içe dahil), .eml (iletilmiş mailin içindeki mail dahil) ve doğrudan CV dosyaları.
-   Tarama.calistir([{ad, yol, veri:Uint8Array}], ilerleme) -> { kayitlar, ekler: Map(kimlik -> {ad, veri}), sayac, okunamayan } */
+   Tarama.calistir([{ad, yol, veri:Uint8Array}], ilerleme, {ocr}) -> { kayitlar, ekler: Map(kimlik -> {ad, veri}), sayac, okunamayan }
+   ocr verilirse (async (goruntu, ad) -> metin) fotoğraf CV'ler ve taranmış PDF'ler OCR ile okunur.
+   goruntu: {tur:'dosya', veri, ad} | {tur:'jpeg', veri} | {tur:'ham', w, h, kanal, veri} */
 (function () {
   'use strict';
   const Z = globalThis.Zip, E = globalThis.Eml, B = globalThis.Belge;
@@ -25,8 +27,13 @@
   }
   const bekle = () => new Promise(r => setTimeout(r, 0));
 
-  async function calistir(dosyalar, ilerleme) {
+  // OCR çıktısındaki sık hatalar: e-postada @ yerine © ya da boşluk
+  const ocrDuzelt = t => t.replace(/([\w.\-]+)\s*[©®]\s*(gmail|hotmail|yahoo|outlook|icloud|windowslive|live|yandex|msn)\b/gi, '$1@$2')
+    .replace(/([\w.\-]+@(?:gmail|hotmail|yahoo|outlook|icloud))\s*[,.]\s*(com|net)\b/gi, '$1.$2');
+
+  async function calistir(dosyalar, ilerleme, secenek) {
     ilerleme = ilerleme || (() => {});
+    const ocr = secenek && secenek.ocr;
     // 1. zip'leri aç, .eml ve doğrudan CV'leri ayır
     const duz = [];
     for (const d of dosyalar) {
@@ -39,7 +46,7 @@
     for (const d of emller) { const h = ozet(d.veri); if (gorulen.has(h)) continue; gorulen.add(h); tekil.push(d); }
 
     const ekler = new Map(); let kimlikNo = 0;
-    const sayac = { girdi: dosyalar.length, mail: emller.length, tekilMail: tekil.length, ek: 0, dogrudan: dogrudan.length, okunan: 0 };
+    const sayac = { girdi: dosyalar.length, mail: emller.length, tekilMail: tekil.length, ek: 0, dogrudan: dogrudan.length, okunan: 0, ocr: 0 };
     const okunamayan = [];
     const toplam = tekil.length + dogrudan.length; let yapilan = 0;
 
@@ -47,8 +54,22 @@
       const kimlik = 'e' + (kimlikNo++);
       ekler.set(kimlik, { ad, veri });
       const r = B.metin(ad, veri);
-      if (r.durum === 'tamam' && r.metin.trim().length >= 100) sayac.okunan++;
-      else okunamayan.push({ ad, kaynak, durum: r.durum === 'tamam' ? 'metinsiz' : r.durum });
+      // Metin yoksa (fotoğraf ya da taranmış PDF) OCR
+      const pdfMi = r.durum === 'tamam' && /\.pdf$/i.test(ad) && r.metin.trim().length < 100;
+      if (ocr && (r.durum === 'gorsel' || pdfMi)) {
+        let goruntuler = [];
+        if (r.durum === 'gorsel') goruntuler = [{ tur: 'dosya', veri, ad }];
+        else { try { goruntuler = globalThis.PdfMetin.goruntuler(veri, 2); } catch (e) { goruntuler = []; } }
+        let t = '';
+        for (let i = 0; i < goruntuler.length; i++) {
+          ilerleme(yapilan, toplam, `${ad} (OCR${goruntuler.length > 1 ? ` ${i + 1}/${goruntuler.length}` : ''})`);
+          try { t += (await ocr(goruntuler[i], ad)) + '\n'; } catch (e) { /* okunamayan görüntü */ }
+        }
+        t = ocrDuzelt(t).trim();
+        if (t.length >= 80) { r.metin = t; r.durum = 'ocr'; sayac.ocr++; }
+      }
+      if ((r.durum === 'tamam' || r.durum === 'ocr') && r.metin.trim().length >= 100) sayac.okunan++;
+      else okunamayan.push({ ad, kaynak, durum: r.durum === 'tamam' || r.durum === 'ocr' ? 'metinsiz' : r.durum });
       return { ad, boy: veri.length, metin: (r.metin || '').trim(), durum: r.durum, kimlik };
     }
 

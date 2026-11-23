@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex, nofollow">
 <title>CV Tarama ve Puanlama</title>
@@ -36,6 +36,8 @@
   .birak input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
   .birak strong { color: var(--vurgu); }
   .gizli { display: none; }
+  .secenek { display: block; font-size: 14px; }
+  .secenek input { margin-right: 6px; }
   .durum { margin: 8px 0 0; font-size: 14px; }
   .durum:empty { display: none; }
   .durum.bilgi { color: var(--vurgu); }
@@ -119,6 +121,7 @@
       <input type="file" id="klasor-girdi" class="gizli" webkitdirectory multiple>
       <span class="soluk" id="secim"></span>
     </div>
+    <label class="secenek ust-bosluk"><input type="checkbox" id="ocr-ac" checked> Fotoğraf ve taranmış CV'leri de oku (OCR) <span class="soluk">: görsel başına birkaç saniye; ilk kullanımda bu siteden 13 MB'lık okuma motoru ve Türkçe/İngilizce dil verisi iner, sonra tarayıcıda saklanır</span></label>
     <div class="dugmeler ust-bosluk">
       <button type="button" id="basla" class="ana-dugme" disabled>Tara ve puanla</button>
       <button type="button" id="temizle">Baştan başla</button>
@@ -159,7 +162,8 @@
       <li><strong>Yabancı dil (10):</strong> dil sayısı × 2 (en fazla 5) ve en yüksek seviye (C1, C2, IELTS, TOEFL, TOLES, YDS 3; B2 2; B1 1).</li>
       <li><strong>Teknik / yazılım (15):</strong> taban 2, tanınan her yazılım +2 (UYAP, YTS, İcramatik, İcra Pro, İcra Partner, Sinerji, Galle, UETS, SAP, Netsis, Excel, MS Office, Lexpera, Kazancı, UDF, Avaya vb.). CV çok kısaysa en fazla 7.</li>
       <li><strong>Bantlar:</strong> 75 ve üstü öncelikli, 65-74 güçlü aday, 50-64 değerlendirilebilir, 1-49 zayıf eşleşme, 0 değerlendirilemedi (CV yok ya da okunamadı; bu adaylar silinmez, CV yeniden istenmelidir).</li>
-      <li>Puanlar CV beyanına dayanır; diploma, ruhsat ve referans doğrulanmaz. Fotoğraf ya da tarama olarak gelen CV'lerin metni tarayıcıda okunamaz, bunlar elle puanlanmalıdır.</li>
+      <li>Puanlar CV beyanına dayanır; diploma, ruhsat ve referans doğrulanmaz.</li>
+      <li>Fotoğraf ve taranmış PDF CV'ler OCR ile (Tesseract, Türkçe ve İngilizce) bu bilgisayarda okunur; Not sütununda işaretlenir, doğrulukları düşüktür. HEIC fotoğraflar ve bazı tarama biçimleri (JPEG 2000, faks sıkıştırması) okunamaz; bunlar elle puanlanır. OCR'ı kapatınca bu CV'ler 0 puanla listede kalır.</li>
       <li>Fatura, tebligat, referans mektubu, IELTS belgesi gibi CV olmayan ekler ve 800 bayttan küçük dosyalar (imza görselleri) atlanır.</li>
     </ul>
   </details>
@@ -173,6 +177,8 @@
 <script src="tarama.js"></script>
 <script src="xlsx.js"></script>
 <script src="rapor.js"></script>
+<script src="ocr/tesseract.min.js"></script>
+<script src="ocr.js"></script>
 <script src="arayuz.js"></script>
 </body>
 </html>

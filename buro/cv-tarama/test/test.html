@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'unsafe-inline'">
 <meta name="robots" content="noindex, nofollow">
 <title>CV Tarama Testleri</title>
 <style>
@@ -23,6 +23,8 @@
 <script src="../tarama.js"></script>
 <script src="../xlsx.js"></script>
 <script src="../rapor.js"></script>
+<script src="../ocr/tesseract.min.js"></script>
+<script src="../ocr.js"></script>
 <script src="ornekler.js"></script>
 <script src="testler.js"></script>
 </body>
