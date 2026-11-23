@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>CV Tarama ve Puanlama</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233b3f73'/%3E%3Ccircle cx='16' cy='12' r='5' fill='white'/%3E%3Cpath d='M7 26c1.5-5 5-7 9-7s7.5 2 9 7' fill='white'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --zemin: #f3f4f8; --kart: #ffffff; --cizgi: #dcdeea; --yazi: #1c2433; --soluk: #5a6078;
+    --vurgu: #3b3f73; --vurgu-koyu: #2c2f57; --vurgu-acik: #ecedf7;
+    --iyi: #1d7246; --iyi-acik: #e5f3eb; --mavi-acik: #e3edf9; --uyari: #8a6100; --uyari-acik: #fdf2dc; --hata: #b3261e; --hata-acik: #fbe8e6;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--zemin); color: var(--yazi); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  .kap { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+  header.ust { background: var(--vurgu); color: #fff; padding: 22px 0 20px; }
+  header.ust a.geri { display: inline-block; margin-bottom: 8px; color: #fff; opacity: .85; font-size: 13px; text-decoration: none; }
+  header.ust a.geri:hover, header.ust a.geri:focus-visible { opacity: 1; text-decoration: underline; }
+  header.ust h1 { margin: 0 0 4px; font-size: 23px; }
+  header.ust p { margin: 0; opacity: .92; max-width: 820px; }
+  .gizlilik { display: inline-block; margin-top: 10px; padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,.14); font-size: 13px; }
+  main { padding-bottom: 30px; }
+  .adim { background: var(--kart); border: 1px solid var(--cizgi); border-radius: 10px; padding: 18px 20px; margin: 16px 0; }
+  .adim-baslik { display: flex; align-items: center; gap: 10px; }
+  .adim-baslik h2 { font-size: 17px; margin: 0; }
+  .no { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--vurgu); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; }
+  .ipucu, .soluk { color: var(--soluk); }
+  .ipucu { margin: 6px 0 12px; }
+  .birak { position: relative; display: block; border: 2px dashed #b9bdd6; border-radius: 9px; padding: 22px 16px; text-align: center; color: var(--soluk); cursor: pointer; background: #fafbfd; }
+  .birak:hover, .birak.ustunde { border-color: var(--vurgu); background: var(--vurgu-acik); color: var(--vurgu); }
+  .birak:focus-within { outline: 3px solid #b3b7e6; outline-offset: 2px; }
+  .birak input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+  .birak strong { color: var(--vurgu); }
+  .gizli { display: none; }
+  .durum { margin: 8px 0 0; font-size: 14px; }
+  .durum:empty { display: none; }
+  .durum.bilgi { color: var(--vurgu); }
+  .durum.iyi { color: var(--iyi); }
+  .durum.hata { color: var(--hata); font-weight: 600; }
+  button, select, input[type=text], input[type=number], textarea { font: inherit; }
+  button { border-radius: 7px; border: 1px solid #c3c7d8; background: #fff; color: var(--yazi); padding: 8px 16px; cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--vurgu); }
+  button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid #b3b7e6; outline-offset: 1px; }
+  button.ana-dugme { background: var(--vurgu); border-color: var(--vurgu); color: #fff; font-weight: 600; }
+  button.ana-dugme:hover:not(:disabled) { background: var(--vurgu-koyu); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.kucuk { padding: 3px 10px; font-size: 13px; }
+  .dugmeler { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .ust-bosluk { margin-top: 12px; }
+  progress { width: 100%; height: 10px; margin-top: 10px; accent-color: var(--vurgu); }
+  .rozetler { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 10px; }
+  .rozet { padding: 3px 10px; border-radius: 12px; font-size: 13.5px; background: #fff; border: 1px solid var(--cizgi); }
+  .rozet b { font-weight: 700; }
+  .sekmeler { display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--cizgi); margin-top: 8px; }
+  .sekmeler button { border: 1px solid var(--cizgi); border-bottom: none; border-radius: 8px 8px 0 0; padding: 7px 14px; background: #f7f8fb; color: var(--soluk); margin-bottom: -1px; }
+  .sekmeler button[aria-selected=true] { background: #fff; color: var(--vurgu); font-weight: 600; border-color: var(--cizgi); }
+  .tablo-kap { overflow-x: auto; border: 1px solid var(--cizgi); border-top: none; border-radius: 0 0 8px 8px; max-height: 620px; overflow-y: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid #e8eaf1; vertical-align: top; }
+  th { background: #f4f5fa; font-weight: 600; white-space: nowrap; position: sticky; top: 0; z-index: 1; }
+  td.s, th.s { text-align: center; white-space: nowrap; }
+  td.top { font-weight: 700; text-align: center; }
+  td.top.b75 { background: var(--iyi-acik); color: var(--iyi); }
+  td.top.b65 { background: var(--mavi-acik); color: var(--vurgu); }
+  td.top.b0 { background: var(--hata-acik); color: var(--hata); }
+  tr.secili td { background: var(--vurgu-acik); }
+  tr.satir { cursor: pointer; }
+  tr.satir:hover td { background: #f6f7fc; }
+  .etiket { display: inline-block; padding: 1px 7px; border-radius: 9px; font-size: 12px; white-space: nowrap; }
+  .etiket.man { background: var(--iyi-acik); color: var(--iyi); }
+  .etiket.oto { background: #eef0f5; color: var(--soluk); }
+  .etiket.onc { background: var(--uyari-acik); color: var(--uyari); }
+  .not-hucre { color: var(--soluk); font-size: 12.5px; max-width: 280px; }
+  .ayrinti { border: 1px solid var(--cizgi); border-radius: 10px; padding: 16px; margin-top: 14px; background: #fcfcfe; }
+  .ayrinti h3 { margin: 0 0 10px; font-size: 16px; }
+  .izgara { display: grid; grid-template-columns: minmax(280px, 420px) 1fr; gap: 18px; }
+  @media (max-width: 860px) { .izgara { grid-template-columns: 1fr; } }
+  .alan { display: flex; flex-direction: column; gap: 3px; margin-bottom: 9px; font-size: 14px; }
+  .alan input[type=text], .alan select, .alan textarea { border: 1px solid #c3c7d8; border-radius: 6px; padding: 6px 8px; width: 100%; }
+  .alan textarea { min-height: 58px; resize: vertical; }
+  .puanlar { display: grid; grid-template-columns: 1fr 76px; gap: 6px 10px; align-items: center; font-size: 14px; margin-bottom: 9px; }
+  .puanlar input { width: 76px; border: 1px solid #c3c7d8; border-radius: 6px; padding: 5px 6px; text-align: center; }
+  .cv-metin { white-space: pre-wrap; font-size: 13px; line-height: 1.45; background: #fff; border: 1px solid var(--cizgi); border-radius: 8px; padding: 10px 12px; max-height: 460px; overflow: auto; margin: 0; }
+  .cv-gorsel { max-width: 100%; border: 1px solid var(--cizgi); border-radius: 8px; }
+  .uyari { margin: 10px 0 0; padding: 8px 11px; border-radius: 7px; background: var(--uyari-acik); color: #5d4200; font-size: 13.5px; }
+  .uyari.hata { background: var(--hata-acik); color: var(--hata); }
+  details > summary { cursor: pointer; color: var(--vurgu); font-weight: 600; margin: 4px 0; }
+  .okunamayan { font-size: 13px; color: var(--soluk); margin: 6px 0 0; padding-left: 20px; max-height: 220px; overflow: auto; }
+  footer.alt { color: var(--soluk); font-size: 13.5px; padding: 0 16px 28px; }
+  footer.alt ul { margin: 6px 0 0; padding-left: 20px; }
+  footer.alt table { font-size: 13px; background: #fff; border: 1px solid var(--cizgi); border-radius: 8px; max-width: 760px; }
+  @media (max-width: 640px) { .adim { padding: 14px; } header.ust h1 { font-size: 20px; } }
+</style>
+</head>
+<body>
+<header class="ust">
+  <div class="kap">
+    <a class="geri" href="../">← Büro araçları</a>
+    <h1>CV Tarama ve Puanlama</h1>
+    <p>İş ilanlarına gelen başvuruları (.eml mailler, zip'ler, PDF ve Word CV'ler) açar, adayları avukat, stajyer, callcenter, işlemci ve ofis elemanı olarak ayırır, 100 puanlık cetvelle puanlar ve kategori başına sekmeli Excel verir.</p>
+    <span class="gizlilik">Dosyalar bilgisayarınızdan çıkmaz: tüm işlem bu sayfada, tarayıcıda yapılır.</span>
+  </div>
+</header>
+
+<main class="kap">
+  <section class="adim" aria-labelledby="b-dosya">
+    <div class="adim-baslik"><span class="no">1</span><h2 id="b-dosya">Başvuruları seçin</h2></div>
+    <p class="ipucu">Gmail'den indirilen <strong>.eml</strong> dosyaları, onları içeren <strong>.zip</strong>'ler ya da doğrudan CV dosyaları (PDF, DOCX, DOC). İletilmiş mailin içindeki mailin ekleri de çıkarılır, aynı mail birden çok kez gelmişse bir kez sayılır. Klasördeki CV'lerde klasör adı başvurulan pozisyon gibi okunur (ör. <em>Stajyer/ad-soyad.pdf</em>).</p>
+    <label class="birak" id="birak">
+      <input type="file" id="girdi" multiple accept=".eml,.zip,.pdf,.docx,.doc,.odt,.rtf,.txt,.jpg,.jpeg,.png,.heic">
+      <span><strong>Dosyaları seçin</strong> ya da buraya sürükleyin</span>
+    </label>
+    <div class="dugmeler ust-bosluk">
+      <button type="button" id="klasor-sec">Klasör seç</button>
+      <input type="file" id="klasor-girdi" class="gizli" webkitdirectory multiple>
+      <span class="soluk" id="secim"></span>
+    </div>
+    <div class="dugmeler ust-bosluk">
+      <button type="button" id="basla" class="ana-dugme" disabled>Tara ve puanla</button>
+      <button type="button" id="temizle">Baştan başla</button>
+    </div>
+    <progress id="ilerleme" hidden></progress>
+    <p class="durum" id="durum" role="status"></p>
+  </section>
+
+  <section class="adim" id="sonuc-bolum" aria-labelledby="b-sonuc" hidden>
+    <div class="adim-baslik"><span class="no">2</span><h2 id="b-sonuc">Sonuçları gözden geçirin</h2></div>
+    <p class="ipucu">Otomatik puanlama listeyi sıralamak için yeterli, tepesi için değil. <strong>Her kategorinin ilk 15-20 adayını açıp CV'ye bakarak teyit edin</strong>: satıra tıklayın, CV metni ve puanlar açılır. Değiştirdiğiniz satır "Manuel inceleme" olarak işaretlenir. Öne çıkarmak istediğiniz aday için puanı değil <strong>Öncelik</strong> alanını kullanın; sebebi Excel'de görünür.</p>
+    <div class="rozetler" id="rozetler"></div>
+    <div id="okunamayan"></div>
+    <div class="sekmeler" role="tablist" id="sekmeler"></div>
+    <div class="tablo-kap" id="tablo"></div>
+    <div id="ayrinti"></div>
+  </section>
+
+  <section class="adim" id="indir-bolum" aria-labelledby="b-indir" hidden>
+    <div class="adim-baslik"><span class="no">3</span><h2 id="b-indir">Excel'i indirin</h2></div>
+    <p class="ipucu">Özet sayfası ve her kategori için puana göre sıralı, filtreli bir sayfa. Elle yaptığınız düzeltmeler ve öncelik işaretleri dahildir.</p>
+    <div class="dugmeler">
+      <label class="alan" style="margin:0;flex-direction:row;align-items:center;gap:8px">Rapor başlığı <input type="text" id="baslik" placeholder="ör. büro adı" style="width:220px"></label>
+      <button type="button" id="indir" class="ana-dugme">Excel'i indir</button>
+    </div>
+    <p class="durum" id="indir-durum" role="status"></p>
+  </section>
+</main>
+
+<footer class="alt kap">
+  <details>
+    <summary>Puanlama cetveli ve kurallar</summary>
+    <ul>
+      <li><strong>Kategori:</strong> mail konusu (aday hangi ilana başvurdu) CV içeriğine ağır basar. Hukuk fakültesi yoksa avukat ya da stajyer olamaz; ruhsat ya da baro kaydı kanıtı varsa avukat; hukuk fakültesi var, ruhsat yok ve öğrencilik ya da staj sinyali varsa stajyer.</li>
+      <li><strong>Eğitim (20):</strong> doktora 20, yüksek lisans 19, hukuk lisans 16, diğer lisans 14, ön lisans ya da Adalet MYO 12, lise 8, ilkokul 5; alanla ilgili bölüm, onur derecesi ya da burs, 3,0 üstü not ortalaması için birer puan.</li>
+      <li><strong>İlgili deneyim (30):</strong> yıl sayısına göre 4 ile 30 arası; deneyim hukuk bürosu, adliye, icra, varlık yönetim ya da faktoring dışındaysa yüzde 30 düşer. CV çok kısaysa en fazla 14.</li>
+      <li><strong>Pozisyon uygunluğu (25):</strong> taban 6, kategoriye özgü her sinyal +2 (en fazla +15), İstanbul ya da büroya yakın ilçe +3, ruhsatlı avukat +2.</li>
+      <li><strong>Yabancı dil (10):</strong> dil sayısı × 2 (en fazla 5) ve en yüksek seviye (C1, C2, IELTS, TOEFL, TOLES, YDS 3; B2 2; B1 1).</li>
+      <li><strong>Teknik / yazılım (15):</strong> taban 2, tanınan her yazılım +2 (UYAP, YTS, İcramatik, İcra Pro, İcra Partner, Sinerji, Galle, UETS, SAP, Netsis, Excel, MS Office, Lexpera, Kazancı, UDF, Avaya vb.). CV çok kısaysa en fazla 7.</li>
+      <li><strong>Bantlar:</strong> 75 ve üstü öncelikli, 65-74 güçlü aday, 50-64 değerlendirilebilir, 1-49 zayıf eşleşme, 0 değerlendirilemedi (CV yok ya da okunamadı; bu adaylar silinmez, CV yeniden istenmelidir).</li>
+      <li>Puanlar CV beyanına dayanır; diploma, ruhsat ve referans doğrulanmaz. Fotoğraf ya da tarama olarak gelen CV'lerin metni tarayıcıda okunamaz, bunlar elle puanlanmalıdır.</li>
+      <li>Fatura, tebligat, referans mektubu, IELTS belgesi gibi CV olmayan ekler ve 800 bayttan küçük dosyalar (imza görselleri) atlanır.</li>
+    </ul>
+  </details>
+</footer>
+
+<script src="zip.js"></script>
+<script src="pdf.js"></script>
+<script src="eml.js"></script>
+<script src="belge.js"></script>
+<script src="puan.js"></script>
+<script src="tarama.js"></script>
+<script src="xlsx.js"></script>
+<script src="rapor.js"></script>
+<script src="arayuz.js"></script>
+</body>
+</html>
