@@ -488,7 +488,8 @@
       const tekil = a => [...new Set(a.filter(Boolean))];
       const takipler = tekil(rs.map(r => metin(r['Takip Dosya No'])));
       const bakiye = takipler.reduce((s, t) => s + sayi(rs.find(r => metin(r['Takip Dosya No']) === t)['Bakiye']), 0);
-      const acik = (r, k) => !(k in r) || metin(r[k]) === 'Açık';
+      // Galle'nin yeni "Export.xlsx" raporunda "İcra Durum" sütunu var ama boş geliyor: boş değer "bilinmiyor" sayılır, yalnızca dolu ve "Açık" olmayan değer eler
+      const acik = (r, k) => !(k in r) || metin(r[k]) === '' || metin(r[k]) === 'Açık';
       return {
         MusteriNo: no, Unvan: metin(rs[0]['Müşteri Ünvan']), Tip: metin(rs[0]['Takip Dosya Tipi']), TakipNolar: takipler.join(','),
         IcraDosyalar: tekil(rs.map(r => `${metin(r['İcra Dairesi'])} ${metin(r['İcra Dosya No'])}`.trim())).join(' | '), Bakiye: +bakiye.toFixed(2),
