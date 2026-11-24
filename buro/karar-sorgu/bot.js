@@ -21,7 +21,7 @@
   'use strict';
 
   const KS = {};
-  const SURUM = '1.1.3';
+  const SURUM = '1.1.4';
 
   /* ---------- Metin ve sayı ---------- */
   function metin(v) { return v === null || v === undefined ? '' : String(v).replace(/\s+/g, ' ').trim(); }
@@ -239,7 +239,9 @@
       /* Tutar ile etiket arasında başka bir tutar geçmeden birkaç sözcük olabilir:
          "2.870,00 TL geçiş ücreti ve 4 katı cezasına ilişkin asıl alacak", "121,02 TL işlemiş faizin KDV'si" */
       const ara = '(?:(?!\\d{1,3}(?:\\.\\d{3})*,\\d{2})[\\s\\S])';
-      r.kabul.asil = ilk(c, new RegExp(N + TL + ara + '{0,80}?ASIL\\s*ALACAK'));
+      /* "asıl alacak", "asıl alacağı"; asıl alacak yazmıyorsa "12.582,50 TL geçiş ücreti" asıl alacaktır */
+      r.kabul.asil = ilk(c, new RegExp(N + TL + ara + '{0,80}?ASIL\\s*ALACA[KĞ]'))
+        ?? ilk(c, new RegExp(N + TL + ara + '{0,20}?GEÇİŞ\\s*ÜCRET'));
       r.kabul.alacak = r.kabul.asil === null ? ilk(c, new RegExp(N + TL + '\\s*ALACAK')) : null;
       r.kabul.faiz = ilk(c, new RegExp(N + TL + ara + '{0,30}?(?:TAKİP\\s*ÖNCESİ\\s*)?(?:İŞLEMİŞ\\s*)?FAİZ'));
       r.kabul.kdv = ilk(c, new RegExp(N + TL + ara + '{0,40}?KDV'));
