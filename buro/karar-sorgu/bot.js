@@ -21,7 +21,7 @@
   'use strict';
 
   const KS = {};
-  const SURUM = '1.2.1';
+  const SURUM = '1.2.2';
 
   /* ---------- Metin ve sayı ---------- */
   function metin(v) { return v === null || v === undefined ? '' : String(v).replace(/\s+/g, ' ').trim(); }
@@ -215,7 +215,9 @@
     const r = { sonuc: null, kabul: { asil: null, faiz: null, kdv: null, toplam: null }, red: {}, takipTalebindeki: false, kesin: false, takipSonrasiFaizKabul: false };
     if (!H) return r;
     const sonucBul = function (T) {
-      if (/KISMEN\s+KABUL/.test(T)) return 'KISMEN KABUL';
+      if (/KISMEN\s+KABUL|KISMEN\s+İPTAL/.test(T)) return 'KISMEN KABUL';
+      /* Görevsizlik ve diğer usulden retler esasa girilmemiş karardır: dosya görevli mahkemeye gider */
+      if (/USULDEN\s+REDDİNE|GÖREVSİZLİK/.test(T) || /GÖREVLİ[^.;]{0,120}GÖNDERİLMESİNE/.test(T)) return 'USULDEN RED';
       if (/(KARAR\s+VERİLMESİNE|HÜKÜM\s+KURULMASINA|HÜKÜM\s+OLUŞTURULMASINA)\s+YER\s+OLMADIĞINA/.test(T) && !/AÇILMAMIŞ\s+SAYIL/.test(T)) return 'KARAR VERİLMESİNE YER OLMADIĞINA';
       if (/AÇILMAMIŞ\s+SAYIL(A)?MASINA/.test(T)) return 'AÇILMAMIŞ SAYILMASINA';
       if (/KONUSUZ\s+KAL/.test(T)) return 'KONUSUZ';
@@ -267,7 +269,7 @@
   };
 
   /* ---------- Hesap ---------- */
-  const SONUCSUZ = ['KARAR VERİLMESİNE YER OLMADIĞINA', 'AÇILMAMIŞ SAYILMASINA', 'KONUSUZ', 'FERAGAT'];
+  const SONUCSUZ = ['KARAR VERİLMESİNE YER OLMADIĞINA', 'AÇILMAMIŞ SAYILMASINA', 'KONUSUZ', 'FERAGAT', 'USULDEN RED'];
   KS.hesapla = function (t, hk) {
     const s = { S: 0, T: 0, U: 0, V: 0, W: 0, kalemler: [], faizKdv: [], notlar: [], tamam: true };
     if (!hk || !hk.sonuc) { s.tamam = false; s.notlar.push('Hüküm okunamadı'); return s; }
