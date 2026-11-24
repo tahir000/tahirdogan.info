@@ -21,7 +21,7 @@
   'use strict';
 
   const KS = {};
-  const SURUM = '1.0.1';
+  const SURUM = '1.0.2';
 
   /* ---------- Metin ve sayı ---------- */
   function metin(v) { return v === null || v === undefined ? '' : String(v).replace(/\s+/g, ' ').trim(); }
@@ -158,12 +158,12 @@
     if (SONUCSUZ.indexOf(hk.sonuc) !== -1) { s.notlar.push('Esas hakkında karar yok (' + hk.sonuc.toLocaleLowerCase('tr') + '); reddedilen kalem yazılmadı'); return s; }
     const k = hk.kabul;
     if (!t || t.asil === null) {
-      const temiz = !hk.red.icraInkar && !hk.red.faiz && !hk.red.kdv && !hk.red.takipSonrasiFaiz && !hk.red.fazla;
+      const temiz = !hk.red.faiz && !hk.red.kdv && !hk.red.takipSonrasiFaiz && !hk.red.fazla;
       if (hk.sonuc === 'KABUL' && k.asil !== null) {
         /* Kabul kararında talep, hükümde kabul edilen tutara eşittir */
         t = { asil: k.asil, faiz: k.faiz || 0, kdv: k.kdv || 0, ucret: null, ceza: null, toplam: null, icraInkar: t ? t.icraInkar : true, icraInkarOran: (t && t.icraInkarOran) || 20 };
         s.notlar.push('Dilekçede kalemler ayrı yazılmamış; kabul kararı olduğundan hükümdeki tutarlar talep sayıldı');
-      } else if (hk.sonuc === 'KABUL' && hk.takipTalebindeki && temiz && !(hk.icraInkarAnilmadi && t && t.icraInkar)) {
+      } else if (hk.sonuc === 'KABUL' && hk.takipTalebindeki && temiz) {
         return s;
       } else {
         s.tamam = false;
@@ -197,17 +197,12 @@
       else { s.U = yuvarla(ra / 5); s.V = yuvarla(ra - s.U); s.notlar.push('Reddedilen asıl alacak geçiş ücreti ve cezaya 1/4 oranıyla ayrıldı'); }
     }
     s.S = rf; s.T = rk;
-    const anilmadi = hk.icraInkarAnilmadi && (hk.sonuc === 'KABUL' || hk.sonuc === 'KISMEN KABUL');
-    if ((hk.red.icraInkar || hk.sonuc === 'RED' || anilmadi) && t.icraInkar) {
-      s.W = yuvarla(t.asil * (t.icraInkarOran || 20) / 100);
-      if (anilmadi) s.notlar.push('Hükümde icra inkâr tazminatına hükmedilmemiş; talep reddedilmiş sayıldı');
-      s.notlar.push('Reddedilen icra inkâr tazminatı talep edilen asıl alacağın %' + (t.icraInkarOran || 20) + '\'si olarak hesaplandı');
-    }
+    /* Büro kuralı (Tahir, 24.11.2026): reddedilen icra inkâr tazminatı reddedilen kalem ve tutara sayılmaz; W her zaman YOK */
+    if (hk.red.icraInkar && t.icraInkar) s.notlar.push('İcra inkâr talebi reddedilmiş; büro kuralı gereği sayılmadı');
     if (s.U > 0) s.kalemler.push('GEÇİŞ ÜCRETİ');
     if (s.V > 0) s.kalemler.push('GECİKME CEZASI');
     if (s.S > 0 || hk.red.takipSonrasiFaiz) s.kalemler.push('FAİZ');
     if (s.T > 0) s.kalemler.push('KDV');
-    if (s.W > 0) s.kalemler.push('İCRA İNKAR');
     if (s.S > 0) s.faizKdv.push('TAKİP ÖNCESİ FAİZ');
     if (hk.red.takipSonrasiFaiz) s.faizKdv.push('TAKİP SONRASI FAİZ');
     if (s.T > 0) s.faizKdv.push('KDV');

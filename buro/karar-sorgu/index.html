@@ -77,12 +77,12 @@ footer { padding-bottom: 30px; color: var(--soluk); font-size: 13px; }
 <h2>Excel'e yazılanlar</h2>
 <table>
 <tr><th>Sütun</th><th>Değer</th></tr>
-<tr><td>N</td><td>Reddedilen kalemler: GEÇİŞ ÜCRETİ, GECİKME CEZASI, FAİZ, KDV, İCRA İNKAR; yoksa YOK.</td></tr>
+<tr><td>N</td><td>Reddedilen kalemler: GEÇİŞ ÜCRETİ, GECİKME CEZASI, FAİZ, KDV; yoksa YOK.</td></tr>
 <tr><td>O</td><td>Reddedilen faiz ve KDV: TAKİP ÖNCESİ FAİZ, TAKİP SONRASI FAİZ, KDV; yoksa YOK.</td></tr>
 <tr><td>R</td><td>S, T, U, V ve W tutarlarının toplamı.</td></tr>
 <tr><td>S, T</td><td>Reddedilen faiz ve KDV tutarı: talep edilen eksi hükümde kabul edilen.</td></tr>
 <tr><td>U, V</td><td>Reddedilen geçiş ücreti ve gecikme cezası. Dilekçede ayrı yazılmamışsa reddedilen asıl alacak 1/4 oranıyla ayrılır (ceza, ücretin dört katı; 6001 s.K. m.30/5).</td></tr>
-<tr><td>W</td><td>İcra inkâr tazminatı talebi reddedildiyse talep edilen asıl alacağın dilekçedeki oranı (genellikle %20).</td></tr>
+<tr><td>W</td><td>Büro kuralı: reddedilen icra inkâr tazminatı reddedilen kalem ve tutara sayılmaz, YOK yazılır. Red varsa panelde notta görünür.</td></tr>
 <tr><td>X</td><td>KESİNLEŞTİ: dosyada kesinleşme evrakı var ya da karar kesin olarak verilmiş. Değilse KESİNLEŞMEDİ.</td></tr>
 <tr><td>Y</td><td>Kesinleşmişse HİTAM; değilse İSTİNAF, TEMYİZ, KESİNLEŞME BEKLENİYOR ya da DERDEST.</td></tr>
 </table>
@@ -94,9 +94,7 @@ footer { padding-bottom: 30px; color: var(--soluk); font-size: 13px; }
 <ul>
 <li class="uyari">Hüküm ya da dilekçe okunamazsa, dosyada ıslah varsa ya da ek karar sonucu değiştirmiş olabilirse bot N–W hücrelerini boş bırakır, yalnız X ve Y'yi yazar; nedeni panelde turuncu not olarak görünür.</li>
 <li>Hükümde yalnız "takibin … TL asıl alacak üzerinden devamına" yazıyorsa işlemiş faiz ve KDV reddedilmiş sayılır; panelde bu not düşülür.</li>
-<li>Dilekçede asıl alacak, faiz ve KDV ayrı yazılmamışsa (yalnız harca esas değer varsa): kabul kararında hükümdeki tutarlar talep sayılır; kısmen kabul ve redde kalemler ayrılamaz, N–W boş kalır ve toplam reddedilen tutar notta yazar.</li>
-<li>Hükümde icra inkâr tazminatına hiç değinilmemişse talep reddedilmiş sayılır ve notta belirtilir.</li>
-<li>Dosya istinaf ya da temyize gitmişse ilk derece kararı okunur; üst mahkeme sonucu değiştirdiyse elle düzeltin.</li>
+<li>Dilekçede asıl alacak, faiz ve KDV ayrı yazılmamışsa (yalnız harca esas değer varsa): kabul kararında hükümdeki tutarlar talep sayılır; kısmen kabul ve redde kalemler ayrılamaz, N–W boş kalır ve toplam reddedilen tutar notta yazar.</li><li>Dosya istinaf ya da temyize gitmişse ilk derece kararı okunur; üst mahkeme sonucu değiştirdiyse elle düzeltin.</li>
 </ul>
 </section>
 
@@ -111,7 +109,7 @@ footer { padding-bottom: 30px; color: var(--soluk); font-size: 13px; }
 
 </main>
 <footer class="kap">
-<p>Sürüm 1.0.1 ·Kasım 2026 · <a href="test/test.html">Testler</a></p>
+<p>Sürüm 1.0.2 ·Kasım 2026 · <a href="test/test.html">Testler</a></p>
 </footer>
 </body>
 </html>
