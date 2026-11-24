@@ -21,7 +21,7 @@
   'use strict';
 
   const KS = {};
-  const SURUM = '1.1.4';
+  const SURUM = '1.2.0';
 
   /* ---------- Metin ve sayı ---------- */
   function metin(v) { return v === null || v === undefined ? '' : String(v).replace(/\s+/g, ' ').trim(); }
@@ -645,6 +645,32 @@
     /* İcra dosyasındaki takip talebinden talep kalemleri. Dava dosyasının evrakları okunduktan SONRA çağrılmalı:
        UYAP, yeni bir arama yapılınca önceki dosyanın kimliğini geçersiz kılıyor. */
     async function icraTalep(daire, no) {
+      const r = await icraDosyasi(daire, no);
+      return r ? takipOku(r) : null;
+    }
+    async function takipOku(r) {
+      const tt = r.ev.filter(function (x) { return /^TAKİP TALEBİ$/.test(buyuk(x.tur)); });
+      if (!tt.length) return null;
+      const xml = await belgeXml(r.d, tt[tt.length - 1]);
+      const t = xml ? KS.takipTalebiCoz(xml) : null;
+      if (t) t.daire = r.birim.ad;
+      return t;
+    }
+    /* Dava dosyası bu hesapla görünmüyorsa: mahkemenin icra dosyasına gönderdiği ilam (İlam Bilgisi Evrakı) ve takip talebi */
+    async function icraIlam(daire, no) {
+      const r = await icraDosyasi(daire, no);
+      if (!r) return null;
+      const adaylar = r.ev.filter(function (x) { return /İLAM/.test(buyuk(x.tur)) && /MAHKEME/.test(buyuk(x.gonderen)); });
+      let ilam = null;
+      for (const x of adaylar.slice(0, 2)) {
+        let m = '';
+        try { m = await belgeMetni(r.d, x); } catch (h) { if (h && h.kod) throw h; }
+        for (const y of (x.ekler || []).slice(0, 2)) { try { m += '\n' + await belgeMetni(r.d, y); } catch (h) { if (h && h.kod) throw h; } }
+        if (m && KS.hukumCoz(KS.hukumAyikla(m) || m).sonuc) { ilam = { evrak: x, metin: m }; break; }
+      }
+      return { ilam: ilam, talep: ilam ? await takipOku(r) : null, daire: r.birim.ad, ilamSayisi: adaylar.length };
+    }
+    async function icraDosyasi(daire, no) {
       const e = esasNo(no);
       if (!e || !metin(daire)) return null;
       const liste = (await birimListesi('2', '1101', false, icraDuz)).filter(function (b) { return !/İFLAS/.test(buyuk(b.ad)); });
@@ -659,13 +685,7 @@
         if (u.length === 1) { d = Object.assign({}, b, { dosyaId: u[0].dosyaId, dosyaDurum: metin(u[0].dosyaDurum) || b.dosyaDurum }); break; }
       }
       if (!d) return null;
-      const ev = await evraklar(d);
-      const tt = ev.filter(function (x) { return /^TAKİP TALEBİ$/.test(buyuk(x.tur)); });
-      if (!tt.length) return null;
-      const xml = await belgeXml(d, tt[tt.length - 1]);
-      const t = xml ? KS.takipTalebiCoz(xml) : null;
-      if (t) t.daire = birim.ad;
-      return t;
+      return { d: d, ev: await evraklar(d), birim: birim };
     }
     async function dosyaBul(mahkeme, esas) {
       const kod = birimTuru(mahkeme);
@@ -695,7 +715,7 @@
         if (!t || typeof t !== 'object') break;
         Object.keys(t).forEach(function (grup) {
           if (grup.indexOf(d.dosyaNo + '(') !== 0) return;
-          (Array.isArray(t[grup]) ? t[grup] : []).forEach(function (x) { hepsi.push({ evrakId: x.evrakId, tur: metin(x.tur), tarih: metin(x.onaylandigiTarih), aciklama: metin(x.aciklama), ekler: Array.isArray(x.ekEvrakListesi) ? x.ekEvrakListesi.map(function (y) { return { evrakId: y.evrakId, tur: metin(x.tur) + ' eki' }; }) : [] }); });
+          (Array.isArray(t[grup]) ? t[grup] : []).forEach(function (x) { hepsi.push({ evrakId: x.evrakId, tur: metin(x.tur), tarih: metin(x.onaylandigiTarih), aciklama: metin(x.aciklama), gonderen: metin(x.gonderenYerKisi), ekler: Array.isArray(x.ekEvrakListesi) ? x.ekEvrakListesi.map(function (y) { return { evrakId: y.evrakId, tur: metin(x.tur) + ' eki' }; }) : [] }); });
         });
         if (!(Number(v.pageTotal) > s)) break;
       }
@@ -743,14 +763,43 @@
       }
       return s;
     }
-    return { dosyaBul: dosyaBul, evraklar: evraklar, belgeMetni: belgeMetni, icraTalep: icraTalep, aralikAyarla: function (ms) { aralik = ms; } };
+    return { dosyaBul: dosyaBul, evraklar: evraklar, belgeMetni: belgeMetni, icraTalep: icraTalep, icraIlam: icraIlam, aralikAyarla: function (ms) { aralik = ms; } };
+  };
+
+  /* Karar, icra dosyasına gelen ilamdan: kesinleşme ilamın kendisinden (kesin karar ya da kesinleşme şerhi) değerlendirilir */
+  KS.ilamdanSonuc = function (s, r) {
+    const m = r.ilam.metin, e = r.ilam.evrak;
+    const hk = KS.hukumCoz(KS.hukumAyikla(m) || m);
+    const kt = KS.kararTarihi(m) || KS.tarihSeri(e.tarih);
+    const kesin = hk.kesin || /KESİNLEŞ(MİŞ|TİĞİ|EN|Tİ)/.test(buyuk(m));
+    const a = kesin ? { X: 'KESİNLEŞTİ', Y: 'HİTAM' } : { X: 'KESİNLEŞMEDİ', Y: 'KESİNLEŞME BEKLENİYOR' };
+    s.notlar.push('Dava dosyası bu hesapla görünmüyor; karar icra dosyasındaki ilamdan okundu (' + e.tur + ' ' + e.tarih + ', ' + e.gonderen + ')');
+    let t = null;
+    if (SONUCSUZ.indexOf(hk.sonuc) === -1) {
+      t = r.talep;
+      s.notlar.push(t ? 'Talep kalemleri takip talebinden alındı (asıl ' + t.asil + ', faiz ' + t.faiz + ', KDV ' + t.kdv + ')' : 'Takip talebi okunamadı');
+    }
+    const h = KS.hesapla(t, hk);
+    s.notlar = s.notlar.concat(h.notlar || []);
+    s.hucre = KS.hucreler(h, a);
+    if (kt) { s.hucre.L = kt.seri; s.kararTarihi = kt.metin; }
+    s.sonuc = hk.sonuc; s.tamam = !!h.tamam;
+    s.ozet = hk.sonuc + ' (icra dosyasındaki ilamdan), ' + a.X.toLocaleLowerCase('tr');
+    return s;
   };
 
   /* ---------- Tek dosya ---------- */
   KS.dosyaSorgula = async function (bag, k) {
     const s = { satir: k.satir, dosya: k.mahkeme + ' ' + k.esas, notlar: [], hucre: null, ozet: '' };
     const d = await bag.dosyaBul(k.mahkeme, k.esas);
-    if (!d) { s.ozet = 'UYAP\'ta bulunamadı (açık ve kapalı dosyalarda; dosyada oturum açan avukat vekil olmayabilir)'; return s; }
+    if (!d) {
+      const yok = 'Dava dosyası UYAP\'ta bu hesapla görünmüyor (oturum açan avukat dava dosyasında vekil değil)';
+      if (!k.daire || !k.icraNo) { s.ozet = yok; return s; }
+      const r = await bag.icraIlam(k.daire, k.icraNo);
+      if (r && r.ilam) return KS.ilamdanSonuc(s, r);
+      s.ozet = yok + '; ' + (!r ? 'icra dosyası da görünmüyor' : r.ilamSayisi ? 'icra dosyasındaki ilam okunamadı' : 'icra dosyasında mahkemeden gelen ilam yok');
+      return s;
+    }
     s.dosyaDurum = d.dosyaDurum;
     const ev = await bag.evraklar(d);
     const tur = function (re) { return ev.filter(function (e) { return re.test(buyuk(e.tur)); }); };
