@@ -69,7 +69,10 @@ footer { padding-bottom: 30px; color: var(--soluk); font-size: 13px; }
 <li>Mahkemeyi (I sütunu) ve esas numarasını (J) UYAP'ta arar: önce açık, bulamazsa kapalı dosyalarda. "Y: … E: …" yazan hücrelerde yeni (Y) mahkeme ve esas alınır.</li>
 <li>Evrak listesinden en son <strong>gerekçeli kararı</strong> açar ve hüküm kısmını okur. Gerekçeli karar yoksa son duruşma zaptındaki kısa karara bakar.</li>
 <li><strong>Dava dilekçesinden</strong> talep edilen asıl alacağı (geçiş ücreti + gecikme cezası), takip öncesi işlemiş faizi, KDV'yi ve icra inkâr talebini okur; toplamı K sütunundaki müddeabihle karşılaştırır.</li>
-<li>Ek karar, ıslah ve istinaf/temyiz evraklarına bakar; sonucu değiştirmiş olabileceklerse uyarır.</li>
+<li>Dilekçede asıl alacak, faiz ve KDV ayrı yazılmamışsa E ve F sütunlarındaki <strong>icra dosyasına</strong> girip takip talebindeki kalemleri alır.</li>
+<li>Hükümde yalnız toplam tutar varsa <strong>bilirkişi raporunda</strong> (ve eklerinde) o toplamı veren asıl alacak, faiz ve KDV'yi bulur.</li>
+<li>Ek kararı ve üst mahkeme (istinaf/temyiz) kararını okur: tutarları düzelttiyse ya da kararı kaldırıp yeniden hüküm kurduysa onu esas alır.</li>
+<li>Karar tarihini gerekçeli karardan alır ve L sütunu boşsa yazar.</li>
 </ol>
 </section>
 
@@ -77,6 +80,7 @@ footer { padding-bottom: 30px; color: var(--soluk); font-size: 13px; }
 <h2>Excel'e yazılanlar</h2>
 <table>
 <tr><th>Sütun</th><th>Değer</th></tr>
+<tr><td>L</td><td>Karar tarihi (gerekçeli karardaki "Karar Tarihi"). Yalnız boşsa yazılır; dolu tarihin üzerine yazılmaz.</td></tr>
 <tr><td>N</td><td>Reddedilen kalemler: GEÇİŞ ÜCRETİ, GECİKME CEZASI, FAİZ, KDV; yoksa YOK.</td></tr>
 <tr><td>O</td><td>Reddedilen faiz ve KDV: TAKİP ÖNCESİ FAİZ, TAKİP SONRASI FAİZ, KDV; yoksa YOK.</td></tr>
 <tr><td>R</td><td>S, T, U, V ve W tutarlarının toplamı.</td></tr>
@@ -109,7 +113,7 @@ footer { padding-bottom: 30px; color: var(--soluk); font-size: 13px; }
 
 </main>
 <footer class="kap">
-<p>Sürüm 1.0.2 ·Kasım 2026 · <a href="test/test.html">Testler</a></p>
+<p>Sürüm 1.1.0 ·Kasım 2026 · <a href="test/test.html">Testler</a></p>
 </footer>
 </body>
 </html>

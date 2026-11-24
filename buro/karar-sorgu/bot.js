@@ -21,7 +21,7 @@
   'use strict';
 
   const KS = {};
-  const SURUM = '1.0.2';
+  const SURUM = '1.1.0';
 
   /* ---------- Metin ve sayı ---------- */
   function metin(v) { return v === null || v === undefined ? '' : String(v).replace(/\s+/g, ' ').trim(); }
@@ -37,21 +37,52 @@
     return isFinite(n) ? n : null;
   }
   const N = '(\\d{1,3}(?:\\.\\d{3})+(?:,\\d{1,2})?|\\d+(?:,\\d{1,2})?)';
-  const TL = '\\s*-?\\s*(?:TL|₺)';
+  const TL = '\\.?\\s*-?\\s*(?:TL|₺)';
   function ilk(metinS, kalip) { const m = metinS.match(kalip); return m ? sayi(m[1]) : null; }
   KS.sayi = sayi;
 
   /* ---------- Mahkeme ve dosya numarası ---------- */
   /* "Y: İSTANBUL 12. TÜKETİCİ\nE: İSTANBUL 15. ASLİYE TİCARET" gibi hücrelerde yeni (Y) değer alınır */
+  /* "(İSTANBUL 2. TÜKETİCİ)\nİstanbul 7. Asliye Ticaret" gibi hücrelerde parantezsiz (güncel) satır alınır */
   function yeniDeger(v) {
     const s = String(v === null || v === undefined ? '' : v);
     const m = s.match(/(?:^|\n)\s*Y\s*:\s*([^\n]+)/i);
-    return metin(m ? m[1] : s);
+    if (m) return metin(m[1]);
+    const satirlar = s.split(/\n/).map(metin).filter(Boolean);
+    const acik = satirlar.filter(function (x) { return !/^\(.*\)$/.test(x); });
+    return metin(acik.length ? acik[acik.length - 1] : s.replace(/[()]/g, ''));
   }
   function mahkemeDuz(v) {
-    return buyuk(v).replace(/^T\.?\s?C\.?\s+/, '').replace(/MAHKEMESİ/g, '').replace(/(\d+)\s*\.\s*/g, '$1. ')
-      .replace(/[^A-ZÇĞİÖŞÜ0-9. ]/g, ' ').replace(/\s+/g, ' ').trim();
+    return buyuk(v).replace(/^T\.?\s?C\.?\s+/, '').replace(/^İST\.?\s+/, 'İSTANBUL ').replace(/MAHKEME\S*/g, '').replace(/(\d+)\s*\.\s*/g, '$1. ')
+      .replace(/[^A-ZÇĞİÖŞÜ0-9. ]/g, ' ').replace(/([^0-9])\./g, '$1').replace(/\s+/g, ' ').trim();
   }
+  function mesafe(a, b) {
+    const d = [];
+    for (let i = 0; i <= a.length; i++) { d[i] = [i]; }
+    for (let j = 1; j <= b.length; j++) d[0][j] = j;
+    for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    return d[a.length][b.length];
+  }
+  /* Ad birebir tutmazsa (İSTANBUK, Mahkemes gibi) aynı numara ve türdeki en yakın tek ad */
+  function enYakin(liste, aranan) {
+    const tam = liste.filter(function (b) { return b.duz === aranan; });
+    if (tam.length === 1) return tam[0];
+    const no = (aranan.match(/(\d+)\./) || [])[1];
+    const aday = liste.map(function (b) { return { b: b, m: mesafe(b.duz, aranan) }; })
+      .filter(function (x) { return x.m <= 3 && (!no || (x.b.duz.match(/(\d+)\./) || [])[1] === no); })
+      .sort(function (x, y) { return x.m - y.m; });
+    return aday.length && (aday.length === 1 || aday[0].m < aday[1].m) ? aday[0].b : null;
+  }
+  KS.enYakin = enYakin;
+  /* Excel tarih seri numarası */
+  function seriTarih(g, a, y) { return Math.round((Date.UTC(+y, +a - 1, +g) - Date.UTC(1899, 11, 30)) / 86400000); }
+  KS.kararTarihi = function (ham) {
+    const s = String(ham || '');
+    const m = s.match(/KARAR\s+TAR[İI]H[İI]\s*:?\s*(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})/i)
+      || s.match(/(?:anlat[ıi]ld[ıi]|verildi)\.?\s*(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})/i);
+    return m ? { metin: ('0' + m[1]).slice(-2) + '.' + ('0' + m[2]).slice(-2) + '.' + m[3], seri: seriTarih(m[1], m[2], m[3]) } : null;
+  };
+  KS.tarihSeri = function (t) { const m = String(t || '').match(/(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})/); return m ? { metin: ('0' + m[1]).slice(-2) + '.' + ('0' + m[2]).slice(-2) + '.' + m[3], seri: seriTarih(m[1], m[2], m[3]) } : null; };
   function birimTuru(ad) {
     const b = buyuk(ad);
     if (/TÜKETİCİ/.test(b)) return '0912';
@@ -91,6 +122,7 @@
     r.kdv = ilk(bolum, new RegExp('KDV\\s*\\(\\s*' + N + TL + '\\s*\\)', 'i'))
       ?? ilk(bolum, new RegExp(N + TL + '\\s*KDV', 'i'));
     r.toplam = ilk(bolum, new RegExp('yönünden toplam\\s*' + N + TL, 'i'))
+      ?? ilk(T, new RegExp('takip talebinde\\s*' + N + TL + '\\s*olarak', 'i'))
       ?? ilk(T, new RegExp('HARCA ESAS DEĞER\\s*:?\\s*' + N + TL, 'i'));
     r.ucret = ilk(bolum, new RegExp(N + TL + '\\s*(?:ihlalli\\s*)?geçiş\\s*ücreti', 'i'));
     r.ceza = ilk(bolum, new RegExp(N + TL + '\\s*(?:gecikme\\s*|idari\\s*para\\s*)?ceza', 'i'));
@@ -105,6 +137,57 @@
     }
     if (r.ucret !== null && r.ceza !== null && r.asil !== null && Math.abs(r.ucret + r.ceza - r.asil) > 0.05) { r.ucret = null; r.ceza = null; }
     return r;
+  };
+
+  /*
+   * İcra dosyasındaki takip talebi (UDF). Metin şablondur; tutarlar content.xml'in <data> bölümünde
+   * "1.872,50" + "TL Asıl Alacak (Geçiş Ücreti-Para Cezası) ..." / "TL Faiz- (Ticari-Yıllık)" / "TL KDV" /
+   * "TL Toplam Alacak" çiftleri olarak durur (24.11.2026'da gerçek dosyada görüldü). İlk alacak grubu alınır.
+   */
+  KS.takipTalebiCoz = function (xml) {
+    const d = String(xml || '');
+    const i = d.indexOf('<data');
+    const yap = [];
+    (i >= 0 ? d.slice(i) : d).replace(/<([A-Za-z_][\w.\-]*)>([^<]*)<\/\1>/g, function (m, a, v) { yap.push(metin(xmlCoz(v))); return m; });
+    const r = { asil: 0, ucret: null, ceza: null, faiz: 0, kdv: 0, diger: 0, toplam: null, icraInkar: true, icraInkarOran: 20, notlar: [], kaynak: 'takip talebi' };
+    let asilVar = false;
+    for (let j = 0; j < yap.length - 1; j++) {
+      if (!/^\d{1,3}(\.\d{3})*,\d{2}$/.test(yap[j])) continue;
+      const n = sayi(yap[j]), et = buyuk(yap[j + 1]);
+      if (!/^TL/.test(et)) continue;
+      if (/TOPLAM/.test(et)) { r.toplam = n; break; }
+      if (/ASIL\s*ALACAK/.test(et)) { r.asil += n; asilVar = true; }
+      else if (/KDV/.test(et)) r.kdv += n;
+      else if (/FAİZ/.test(et)) r.faiz += n;
+      else if (/CEZA/.test(et)) { r.ceza = (r.ceza || 0) + n; r.asil += n; asilVar = true; }
+      else if (/GEÇİŞ|ÜCRET/.test(et)) { r.ucret = (r.ucret || 0) + n; r.asil += n; asilVar = true; }
+      else r.diger += n;
+    }
+    if (!asilVar) return null;
+    ['asil', 'faiz', 'kdv', 'diger'].forEach(function (k) { r[k] = yuvarla(r[k]); });
+    if (r.ucret !== null && r.ceza === null) r.ucret = null;
+    if (r.toplam === null) r.toplam = yuvarla(r.asil + r.faiz + r.kdv + r.diger);
+    if (Math.abs(r.asil + r.faiz + r.kdv + r.diger - r.toplam) > 0.05) r.notlar.push('Takip talebindeki kalemler toplamı tutmuyor');
+    return r;
+  };
+
+  /* Bilirkişi raporunda, kabul edilen toplamı veren asıl alacak + faiz + KDV üçlüsü (son geçen tercih edilir) */
+  KS.bilirkisiUclu = function (ham, toplam) {
+    const T = metin(ham);
+    const topla = function (kalip) {
+      const l = []; let x;
+      const re1 = new RegExp(N + TL + '?\\s*\\(?\\s*(?:' + kalip + ')', 'gi');
+      const re2 = new RegExp('(?:' + kalip + ')(?:\\s*\\([^)]{0,30}\\))?[\\s:]{1,6}' + N + '(?!\\s*(?:TL|₺)?\\s*(?:asıl|faiz|işlemiş|KDV))', 'gi');
+      while ((x = re1.exec(T))) l.push({ n: sayi(x[1]), i: x.index });
+      while ((x = re2.exec(T))) l.push({ n: sayi(x[1]), i: x.index });
+      return l.filter(function (y) { return y.n !== null; }).sort(function (a, b) { return b.i - a.i; }).slice(0, 40);
+    };
+    const A = topla('asıl\\s*alacak'), F = topla('(?:işlemiş\\s*)?faiz'), K = topla('KDV');
+    F.push({ n: 0, i: -1 }); K.push({ n: 0, i: -1 });
+    for (const a of A) for (const f of F) for (const k of K) {
+      if (Math.abs(a.n + f.n + k.n - toplam) <= 0.05) return { asil: a.n, faiz: f.n, kdv: k.n };
+    }
+    return null;
   };
 
   /* ---------- Hüküm ---------- */
@@ -133,11 +216,12 @@
     const dev = H.match(/TAKİBİN([\s\S]{0,500}?)DEVAMINA/) || H.match(/İTİRAZIN([\s\S]{0,400}?)İPTALİNE/);
     if (dev) {
       const c = dev[1];
-      r.kabul.asil = ilk(c, new RegExp(N + TL + '\\s*(?:ASIL\\s*ALACAK|ALACAK)'));
-      r.kabul.faiz = ilk(c, new RegExp(N + TL + '\\s*(?:TAKİP\\s*ÖNCESİ\\s*)?İŞLEMİŞ\\s*FAİZ'));
+      r.kabul.asil = ilk(c, new RegExp(N + TL + '\\s*ASIL\\s*ALACAK'));
+      r.kabul.alacak = r.kabul.asil === null ? ilk(c, new RegExp(N + TL + '\\s*ALACAK')) : null;
+      r.kabul.faiz = ilk(c, new RegExp(N + TL + '\\s*(?:TAKİP\\s*ÖNCESİ\\s*)?(?:İŞLEMİŞ\\s*)?FAİZ'));
       r.kabul.kdv = ilk(c, new RegExp(N + TL + '\\s*(?:FAİZE\\s*İŞLEMİŞ\\s*)?KDV'));
       r.kabul.toplam = ilk(c, new RegExp('TOPLAM\\s*' + N + TL));
-      r.takipTalebindeki = /TAKİP\s+TALEBİNDEKİ|TAKİP\s+TALEBİNDE\s+GÖSTERİLEN|ÖDEME\s+EMRİNDEKİ|AYNEN/.test(c) || (!r.kabul.asil && !r.kabul.toplam);
+      r.takipTalebindeki = /TAKİP\s+TALEBİNDEKİ|TAKİP\s+TALEBİNDE\s+GÖSTERİLEN|ÖDEME\s+EMRİNDEKİ|AYNEN/.test(c) || (!r.kabul.asil && !r.kabul.toplam && !r.kabul.alacak);
     }
     r.red.icraInkar = /İCRA\s*İNKAR[^.;\n]{0,120}REDDİNE/.test(H);
     r.icraInkarAnilmadi = !/İCRA\s*İNKAR/.test(H);
@@ -157,6 +241,11 @@
     if (!hk || !hk.sonuc) { s.tamam = false; s.notlar.push('Hüküm okunamadı'); return s; }
     if (SONUCSUZ.indexOf(hk.sonuc) !== -1) { s.notlar.push('Esas hakkında karar yok (' + hk.sonuc.toLocaleLowerCase('tr') + '); reddedilen kalem yazılmadı'); return s; }
     const k = hk.kabul;
+    /* Hükümde yalnız "… TL alacak" yazıyorsa: talepteki asıl alacaktan büyükse toplamdır, değilse asıl alacak */
+    if (k.asil === null && k.alacak !== null && k.alacak !== undefined) {
+      if (t && t.asil !== null && k.alacak > t.asil + 0.01) { if (k.toplam === null) k.toplam = k.alacak; }
+      else { k.asil = k.alacak; s.notlar.push('Hükümde "alacak" yazıyor; asıl alacak sayıldı'); }
+    }
     if (!t || t.asil === null) {
       const temiz = !hk.red.faiz && !hk.red.kdv && !hk.red.takipSonrasiFaiz && !hk.red.fazla;
       if (hk.sonuc === 'KABUL' && k.asil !== null) {
@@ -179,7 +268,8 @@
     else {
       if (k.asil !== null) ra = Math.max(0, t.asil - k.asil);
       else if (k.toplam !== null && k.faiz === null && k.kdv === null && !hk.takipTalebindeki) {
-        s.tamam = false; s.notlar.push('Hükümde yalnız toplam tutar var (' + k.toplam + ' TL); kalemler ayrılamadı');
+        const tt = t.toplam !== null && t.toplam !== undefined ? t.toplam : yuvarla(t.asil + tf + tk);
+        s.tamam = false; s.notlar.push('Hükümde ve bilirkişi raporunda kalem ayrımı yok: talep ' + tt + ' TL, kabul ' + k.toplam + ' TL, reddedilen ' + yuvarla(tt - k.toplam) + ' TL; kalemler ayrılamadı');
       } else if (hk.sonuc === 'KISMEN KABUL' && !hk.takipTalebindeki) {
         s.tamam = false; s.notlar.push('Kısmen kabul, ama kabul edilen tutar hükümden okunamadı');
       }
@@ -307,11 +397,11 @@
 
   const BASLIKLAR = {
     no: /^NO$/, davali: /^DAVALI$/, daire: /İCRA MÜDÜRLÜĞÜ/, icraNo: /İCRA DOSYA NO/, mahkeme: /MAHKEME BİLGİ/, esas: /MAHKEME DOSYA NO/,
-    muddeabih: /MÜDDEABİH/, karar: /^KARAR$/,
+    muddeabih: /MÜDDEABİH/, karar: /^KARAR$/, L: /^KARAR TARİHİ$/,
     N: /REDDEDİLEN KALEM/, O: /FAİZ\s*&\s*KDV/, R: /TOPLAM TUTAR/, S: /FAİZ TUTARI/, T: /KDV TUTARI/, U: /GEÇİŞ ÜCRETİ TUTARI/,
     V: /GECİKME CEZASI/, W: /İCRA İNKAR/, X: /KESİNLEŞTİ/, Y: /^AŞAMASI$/
   };
-  const YEDEK = { no: 'A', davali: 'D', daire: 'E', icraNo: 'F', mahkeme: 'I', esas: 'J', muddeabih: 'K', karar: 'M', N: 'N', O: 'O', R: 'R', S: 'S', T: 'T', U: 'U', V: 'V', W: 'W', X: 'X', Y: 'Y' };
+  const YEDEK = { no: 'A', davali: 'D', daire: 'E', icraNo: 'F', mahkeme: 'I', esas: 'J', muddeabih: 'K', karar: 'M', L: 'L', N: 'N', O: 'O', R: 'R', S: 'S', T: 'T', U: 'U', V: 'V', W: 'W', X: 'X', Y: 'Y' };
   const CIKTI = ['N', 'O', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y'];
   KS.CIKTI = CIKTI;
 
@@ -370,7 +460,8 @@
       kayitlar.push({
         satir: r, no: deger('no'), davali: metin(deger('davali')), mahkeme: yeniDeger(deger('mahkeme')), esas: yeniDeger(esas),
         daire: metin(deger('daire')), icraNo: metin(deger('icraNo')), muddeabih: typeof deger('muddeabih') === 'number' ? deger('muddeabih') : sayi(deger('muddeabih')),
-        karar: metin(deger('karar')), dolu: CIKTI.some(function (c) { return metin(deger(c)) !== ''; })
+        karar: metin(deger('karar')), dolu: CIKTI.some(function (c) { return metin(deger(c)) !== ''; }),
+        tamDolu: CIKTI.every(function (c) { return metin(deger(c)) !== ''; }), kararTarihiVar: metin(deger('L')) !== ''
       });
     }
     return { girdiler: g, sayfaYolu: yol, sayfaAdi: sayfaAdi, xml: xml, sutunlar: sut, kayitlar: kayitlar };
@@ -409,6 +500,23 @@
       xml = xml.replace(m[0], satirXml);
     });
     return xml;
+  };
+
+  /* Sonuçlardan yazılacak hücreler: N–Y'si tam dolu satıra yalnız karar tarihi, dolu karar tarihinin üzerine hiç yazılmaz */
+  KS.yazilacaklar = function (okunan, sonuclar) {
+    const deg = {};
+    const kayit = {};
+    okunan.kayitlar.forEach(function (x) { kayit[x.satir] = x; });
+    Object.keys(sonuclar).forEach(function (r) {
+      const h = sonuclar[r] && sonuclar[r].hucre;
+      if (!h) return;
+      let o = Object.assign({}, h);
+      const x = kayit[r];
+      if (x && x.tamDolu) o = h.L !== undefined ? { L: h.L } : {};
+      if (x && x.kararTarihiVar) delete o.L;
+      if (Object.keys(o).length) deg[r] = o;
+    });
+    return deg;
   };
 
   KS.excelYaz = async function (okunan, degerler) {
@@ -483,18 +591,50 @@
         return v;
       }
     }
+    async function birimListesi(yargiTuru, kod, kapali, duzelt) {
+      const anahtar = yargiTuru + kod + (kapali ? 'k' : 'a');
+      if (!birimOnbellek[anahtar]) {
+        const l = await istek('avukat_mahkemeleri_sorgula.ajx', { yargiTuru: yargiTuru, yargiBirimi: kod, dosyaKapaliMi: kapali });
+        birimOnbellek[anahtar] = (Array.isArray(l) ? l : []).filter(function (b) { return b && b.birimId; }).map(function (b) { return { ad: metin(b.birimAdi), duz: duzelt(b.birimAdi), birimId: String(b.birimId) }; });
+      }
+      return birimOnbellek[anahtar];
+    }
     async function birimBul(kod, ad) {
       const aranan = mahkemeDuz(ad);
       for (const kapali of [false, true]) {
-        const anahtar = kod + (kapali ? 'k' : 'a');
-        if (!birimOnbellek[anahtar]) {
-          const l = await istek('avukat_mahkemeleri_sorgula.ajx', { yargiTuru: '1', yargiBirimi: kod, dosyaKapaliMi: kapali });
-          birimOnbellek[anahtar] = (Array.isArray(l) ? l : []).filter(function (b) { return b && b.birimId; }).map(function (b) { return { ad: metin(b.birimAdi), duz: mahkemeDuz(b.birimAdi), birimId: String(b.birimId) }; });
-        }
-        const tam = birimOnbellek[anahtar].filter(function (b) { return b.duz === aranan; });
-        if (tam.length === 1) return tam[0];
+        const b = enYakin(await birimListesi('1', kod, kapali, mahkemeDuz), aranan);
+        if (b) return b;
       }
       return null;
+    }
+    /* "İstanbul 31.", "İSTANBUL 20.", "İstanbul 34.İcra Dairesi", "İstanbul 21. İcra" -> "İSTANBUL 31" */
+    function icraDuz(v) {
+      return buyuk(v).replace(/^İST\.?\s+/, 'İSTANBUL ').replace(/İCRA\s*(DAİRESİ|MÜDÜRLÜĞÜ)?|DAİRESİ|MÜDÜRLÜĞÜ/g, ' ').replace(/[^A-ZÇĞİÖŞÜ0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+    /* İcra dosyasındaki takip talebinden talep kalemleri. Dava dosyasının evrakları okunduktan SONRA çağrılmalı:
+       UYAP, yeni bir arama yapılınca önceki dosyanın kimliğini geçersiz kılıyor. */
+    async function icraTalep(daire, no) {
+      const e = esasNo(no);
+      if (!e || !metin(daire)) return null;
+      const liste = (await birimListesi('2', '1101', false, icraDuz)).filter(function (b) { return !/İFLAS/.test(buyuk(b.ad)); });
+      const birim = enYakin(liste, icraDuz(daire));
+      if (!birim) return null;
+      const b = { dosyaNo: e.no, birimTuru2: '1101', birimId: birim.birimId, birimAdi: birim.ad, dosyaDurum: 'Açık' };
+      let d = null;
+      for (const durum of [0, 1]) {
+        const r = await istek('search_phrase_detayli.ajx', { dosyaDurumKod: durum, pageSize: 500, pageNumber: 1, dosyaYil: e.yil, dosyaSira: e.sira, birimId: birim.birimId, birimTuru2: '1101', birimTuru3: '2' }, b);
+        let u = (Array.isArray(r) && Array.isArray(r[0]) ? r[0] : []).filter(function (x) { return x && metin(x.dosyaNo) === e.no; });
+        if (u.length > 1) u = u.filter(function (x) { return x.dosyaTurKod === 35; });
+        if (u.length === 1) { d = Object.assign({}, b, { dosyaId: u[0].dosyaId, dosyaDurum: metin(u[0].dosyaDurum) || b.dosyaDurum }); break; }
+      }
+      if (!d) return null;
+      const ev = await evraklar(d);
+      const tt = ev.filter(function (x) { return /^TAKİP TALEBİ$/.test(buyuk(x.tur)); });
+      if (!tt.length) return null;
+      const xml = await belgeXml(d, tt[tt.length - 1]);
+      const t = xml ? KS.takipTalebiCoz(xml) : null;
+      if (t) t.daire = birim.ad;
+      return t;
     }
     async function dosyaBul(mahkeme, esas) {
       const kod = birimTuru(mahkeme);
@@ -524,7 +664,7 @@
         if (!t || typeof t !== 'object') break;
         Object.keys(t).forEach(function (grup) {
           if (grup.indexOf(d.dosyaNo + '(') !== 0) return;
-          (Array.isArray(t[grup]) ? t[grup] : []).forEach(function (x) { hepsi.push({ evrakId: x.evrakId, tur: metin(x.tur), tarih: metin(x.onaylandigiTarih), aciklama: metin(x.aciklama) }); });
+          (Array.isArray(t[grup]) ? t[grup] : []).forEach(function (x) { hepsi.push({ evrakId: x.evrakId, tur: metin(x.tur), tarih: metin(x.onaylandigiTarih), aciklama: metin(x.aciklama), ekler: Array.isArray(x.ekEvrakListesi) ? x.ekEvrakListesi.map(function (y) { return { evrakId: y.evrakId, tur: metin(x.tur) + ' eki' }; }) : [] }); });
         });
         if (!(Number(v.pageTotal) > s)) break;
       }
@@ -532,16 +672,31 @@
       hepsi.sort(function (a, b) { return gun(b.tarih) - gun(a.tarih); });
       return hepsi;
     }
+    /* İmza Pro evrak servisi ara sıra 500 ("evrak servisinde bir hata") döndürür; bir kez yeniden denenir */
+    async function belgeBayt(d, evrak) {
+      for (let deneme = 0; ; deneme++) {
+        const h = basliklar(d);
+        h['Content-Type'] = 'application/octet-stream'; delete h['Accept'];
+        const y = await cagri(yolOneki() + 'view_document_brd.uyap?evrakId=' + encodeURIComponent(evrak.evrakId) + '&dosyaId=' + encodeURIComponent(d.dosyaId), { method: 'GET', credentials: 'include', headers: h });
+        const b = new Uint8Array(await y.arrayBuffer());
+        const bas = String.fromCharCode.apply(null, b.subarray(0, 16));
+        if (/nosessionobject/i.test(bas)) throw dur('OTURUM', 'Oturum kapanmış');
+        if (y.status >= 500 && deneme < 1) { await new Promise(function (r) { setTimeout(r, 6000); }); continue; }
+        return b;
+      }
+    }
     async function belgeMetni(d, evrak) {
-      const h = basliklar(d);
-      h['Content-Type'] = 'application/octet-stream'; delete h['Accept'];
-      const y = await cagri(yolOneki() + 'view_document_brd.uyap?evrakId=' + encodeURIComponent(evrak.evrakId) + '&dosyaId=' + encodeURIComponent(d.dosyaId), { method: 'GET', credentials: 'include', headers: h });
-      const b = new Uint8Array(await y.arrayBuffer());
+      const b = await belgeBayt(d, evrak);
       const bas = String.fromCharCode.apply(null, b.subarray(0, 16));
-      if (/nosessionobject/i.test(bas)) throw dur('OTURUM', 'Oturum kapanmış');
       if (bas.indexOf('PK') === 0) return KS.udfMetni(b);
       if (bas.indexOf('%PDF') === 0) return pdfMetni(b);
       throw new Error(evrak.tur + ' okunamadı (biçim tanınmadı)');
+    }
+    async function belgeXml(d, evrak) {
+      const b = await belgeBayt(d, evrak);
+      if (String.fromCharCode.apply(null, b.subarray(0, 2)) !== 'PK') return null;
+      const g = zipOku(b).find(function (x) { return x.ad === 'content.xml'; });
+      return g ? girdiMetni(g) : null;
     }
     async function pdfMetni(b) {
       let lib = kok.pdfjsLib;
@@ -557,7 +712,7 @@
       }
       return s;
     }
-    return { dosyaBul: dosyaBul, evraklar: evraklar, belgeMetni: belgeMetni, aralikAyarla: function (ms) { aralik = ms; } };
+    return { dosyaBul: dosyaBul, evraklar: evraklar, belgeMetni: belgeMetni, icraTalep: icraTalep, aralikAyarla: function (ms) { aralik = ms; } };
   };
 
   /* ---------- Tek dosya ---------- */
@@ -568,41 +723,90 @@
     s.dosyaDurum = d.dosyaDurum;
     const ev = await bag.evraklar(d);
     const tur = function (re) { return ev.filter(function (e) { return re.test(buyuk(e.tur)); }); };
-    let hukum = '', kaynak = '';
+    const oku = async function (e) {
+      try { return await bag.belgeMetni(d, e); }
+      catch (hata) { if (hata && hata.kod) throw hata; s.notlar.push(e.tur + ' okunamadı'); return ''; }
+    };
+    let hukum = '', kaynak = '', kt = null;
     const gk = tur(/GEREKÇELİ KARAR/);
-    if (gk.length) { hukum = KS.hukumAyikla(await bag.belgeMetni(d, gk[0])); kaynak = 'gerekçeli karar ' + gk[0].tarih; }
+    if (gk.length) { const m = await oku(gk[0]); hukum = KS.hukumAyikla(m); kt = KS.kararTarihi(m); kaynak = 'gerekçeli karar ' + gk[0].tarih; }
     if (!hukum) {
       for (const z of tur(/DURUŞMA ZAPTI|KARAR DURUŞMA|KISA KARAR/).slice(0, 2)) {
-        hukum = KS.hukumAyikla(await bag.belgeMetni(d, z));
-        if (hukum) { kaynak = 'kısa karar (' + z.tur + ' ' + z.tarih + ')'; s.notlar.push('Gerekçeli karar yok; kısa karardan okundu'); break; }
+        const m = await oku(z);
+        hukum = KS.hukumAyikla(m);
+        if (hukum) { kaynak = 'kısa karar (' + z.tur + ' ' + z.tarih + ')'; kt = kt || KS.kararTarihi(m) || KS.tarihSeri(z.tarih); s.notlar.push('Gerekçeli karar yok; kısa karardan okundu'); break; }
       }
     }
-    const hk = hukum ? KS.hukumCoz(hukum) : null;
+    let hk = hukum ? KS.hukumCoz(hukum) : null;
+    let blok = false;
+    /* Üst mahkeme kararı: başvuru reddedildiyse ilk derece kararı geçerli; kaldırıp yeniden hüküm kurduysa o hüküm esas alınır */
+    const ust = tur(/İSTİNAF|BÖLGE ADLİYE|BAM|YARGITAY|TEMYİZ/).filter(function (e) { return /KARAR/.test(buyuk(e.tur)) && !/DİLEKÇE|TALEP|HARÇ|TEBLİ|MÜZEKKERE/.test(buyuk(e.tur)); });
+    if (ust.length && hk && hk.sonuc) {
+      const um = await oku(ust[0]), U = buyuk(um);
+      if (/KALDIRILMASINA|BOZULMASINA|DÜZELTİLEREK/.test(U)) {
+        const uh = KS.hukumCoz(KS.hukumAyikla(um));
+        if (uh.sonuc && !/BOZULMASINA/.test(U)) { hk = uh; kaynak = ust[0].tur + ' ' + ust[0].tarih; s.notlar.push('Üst mahkeme ilk derece kararını kaldırıp yeniden hüküm kurmuş; üst mahkeme hükmü esas alındı'); }
+        else { blok = true; s.notlar.push('Üst mahkeme kararı (' + ust[0].tur + ') sonucu değiştirmiş; hüküm ayrıştırılamadı, elle bakın'); }
+      } else if (/REDDİNE/.test(U)) s.notlar.push('Üst mahkeme başvuruyu reddetmiş; ilk derece kararı geçerli');
+    }
     const a = KS.asama(ev, hk);
     let h = { tamam: false, notlar: [] };
     if (hk && hk.sonuc) {
       let talep = null;
       if (SONUCSUZ.indexOf(hk.sonuc) === -1) {
         const dd = tur(/DAVA DİLEKÇESİ/);
-        if (dd.length) { talep = KS.talepCoz(await bag.belgeMetni(d, dd[dd.length - 1])); s.notlar = s.notlar.concat(talep.notlar); }
+        if (dd.length) { talep = KS.talepCoz(await oku(dd[dd.length - 1])); s.notlar = s.notlar.concat(talep.notlar); }
         else s.notlar.push('Dava dilekçesi evrak listesinde yok');
-        if (talep && talep.toplam !== null && typeof k.muddeabih === 'number' && Math.abs(talep.toplam - k.muddeabih) > 0.05) s.notlar.push('Dilekçedeki toplam (' + talep.toplam + ') Excel\'deki müddeabihten (' + k.muddeabih + ') farklı');
+        for (const e of tur(/EK KARAR/).slice(0, 2)) {
+          const E = buyuk(await oku(e));
+          const karar = E.slice(Math.max(0, E.lastIndexOf('KARAR:')));
+          const ekh = KS.hukumCoz(karar);
+          if (/TALEBİN(İN)?\s+REDDİNE/.test(karar) && !/KABULÜNE|DÜZELTİLMESİNE/.test(karar)) s.notlar.push('Ek karar (' + e.tarih + ') talebi reddetmiş; sonuç değişmedi');
+          else if (ekh.kabul.asil !== null || ekh.kabul.toplam !== null || ekh.kabul.faiz !== null || ekh.kabul.kdv !== null) {
+            ['asil', 'faiz', 'kdv', 'toplam'].forEach(function (x) { if (ekh.kabul[x] !== null) hk.kabul[x] = ekh.kabul[x]; });
+            hk.takipTalebindeki = false;
+            s.notlar.push('Ek kararla (' + e.tarih + ') düzeltilen tutarlar esas alındı');
+          } else if (/ALACAK|TAKİB|FAİZ|KDV/.test(karar) && /KABULÜNE|DÜZELTİL|TAMAMLAN/.test(karar)) { blok = true; s.notlar.push('Ek karar (' + e.tarih + ') alacak kalemlerini değiştirmiş, tutar okunamadı; elle bakın'); }
+          else s.notlar.push('Ek karar var (' + e.tarih + '); alacak kalemlerine dokunmuyor');
+        }
+        /* Hükümde kalem ayrımı yoksa bilirkişi raporu (ve ekleri) okunur; icra dosyasından ÖNCE, çünkü sonra dava dosyasının kimliği geçersiz olur */
+        let bilirkisi = '';
+        const kb = hk.kabul;
+        if (hk.sonuc === 'KISMEN KABUL' && kb.asil === null && kb.faiz === null && kb.kdv === null && (kb.toplam !== null || kb.alacak !== null)) {
+          for (const e of tur(/BİLİRKİŞİ.*RAPOR|EK RAPOR/).slice(0, 2)) {
+            bilirkisi += ' ' + await oku(e);
+            for (const x of (e.ekler || []).slice(0, 2)) bilirkisi += ' ' + await oku(x);
+          }
+        }
+        if (!(talep && talep.asil !== null && talep.faiz !== null && talep.kdv !== null) && k.daire && k.icraNo) {
+          try {
+            const it = await bag.icraTalep(k.daire, k.icraNo);
+            if (it) {
+              if (talep) { it.icraInkar = talep.icraInkar; it.icraInkarOran = talep.icraInkarOran; }
+              talep = it;
+              s.notlar.push('Talep kalemleri icra dosyasındaki takip talebinden alındı (' + it.daire + ' ' + k.icraNo + ': asıl ' + it.asil + ', faiz ' + it.faiz + ', KDV ' + it.kdv + ')');
+              s.notlar = s.notlar.concat(it.notlar);
+            } else s.notlar.push('İcra dosyasında takip talebi bulunamadı (' + k.daire + ' ' + k.icraNo + ')');
+          } catch (hata) {
+            if (hata && ['OTURUM', 'CAPTCHA', 'KISIT'].indexOf(hata.kod) !== -1) throw hata;
+            s.notlar.push('İcra dosyası sorgulanamadı: ' + (hata && hata.message));
+          }
+        }
+        if (bilirkisi) {
+          const top = kb.toplam !== null ? kb.toplam : (talep && talep.asil !== null && kb.alacak > talep.asil + 0.01 ? kb.alacak : null);
+          const u = top !== null ? KS.bilirkisiUclu(bilirkisi, top) : null;
+          if (u) { kb.asil = u.asil; kb.faiz = u.faiz; kb.kdv = u.kdv; kb.toplam = top; kb.alacak = null; s.notlar.push('Kabul edilen kalemler bilirkişi raporundan alındı (asıl ' + u.asil + ', faiz ' + u.faiz + ', KDV ' + u.kdv + ')'); }
+        }
+        if (talep && talep.toplam !== null && typeof k.muddeabih === 'number' && Math.abs(talep.toplam - k.muddeabih) > 0.05) s.notlar.push('Talep toplamı (' + talep.toplam + ') Excel\'deki müddeabihten (' + k.muddeabih + ') farklı');
       }
       h = KS.hesapla(talep, hk);
-      for (const e of tur(/EK KARAR/).slice(0, 2)) {
-        const em = buyuk(await bag.belgeMetni(d, e));
-        const karar = em.slice(Math.max(0, em.lastIndexOf('KARAR:')));
-        if (/TALEBİN(İN)?\s+REDDİNE/.test(karar) && !/KABULÜNE|DÜZELTİLMESİNE/.test(karar)) s.notlar.push('Ek karar (' + e.tarih + ') talebi reddetmiş; sonuç değişmedi');
-        else { h.tamam = false; s.notlar.push('Ek karar (' + e.tarih + ') sonucu değiştirmiş olabilir; elle bakın'); }
-      }
-      if (tur(/ISLAH/).length) {
-        if (h.tamam && h.S + h.T + h.U + h.V + h.W > 0) { h.tamam = false; s.notlar.push('Dosyada ıslah var; talep tutarı değişmiş olabilir, elle bakın'); }
-        else s.notlar.push('Dosyada ıslah var');
-      }
-      if (a.ustMahkeme || a.Y === 'İSTİNAF' || a.Y === 'TEMYİZ') s.notlar.push('Dosya üst mahkemeye gitmiş; üst mahkeme kararı sonucu değiştirmiş olabilir');
+      if (blok) h.tamam = false;
+      if (tur(/ISLAH/).length) s.notlar.push('Dosyada ıslah var; reddedilen tutar takip talebine göre hesaplandı');
+      if ((a.Y === 'İSTİNAF' || a.Y === 'TEMYİZ') && !ust.length) s.notlar.push('Dosya üst mahkemede; sonuç ilk derece kararına göre yazıldı');
     }
     s.notlar = s.notlar.concat(h.notlar || []);
     s.hucre = KS.hucreler(h, a);
+    if (kt) { s.hucre.L = kt.seri; s.kararTarihi = kt.metin; }
     s.sonuc = hk && hk.sonuc;
     s.tamam = !!h.tamam;
     s.ozet = (hk && hk.sonuc ? hk.sonuc + ' (' + kaynak + ')' : 'Karar okunamadı') + ', ' + a.X.toLocaleLowerCase('tr') + (a.neden ? ': ' + a.neden.toLocaleLowerCase('tr') : '');
@@ -625,7 +829,7 @@
     k.innerHTML = '<button class="ks-x" title="Kapat">×</button><h2>Karar Sorgu</h2>'
       + '<div>Excel\'deki davaları UYAP\'ta arar, kararı okur ve N, O, R–Y sütunlarını doldurur. Yalnız sorgular.</div>'
       + '<label>Excel: <input type="file" accept=".xlsx" class="ks-dosya"></label>'
-      + '<label><input type="checkbox" class="ks-bos" checked> Yalnız bu sütunları boş satırlar</label>'
+      + '<label><input type="checkbox" class="ks-bos" checked> Yalnız eksik satırlar (N–Y ya da karar tarihi boş)</label>'
       + '<label>Başlangıç satırı <input type="number" class="ks-bas" min="2" value="2"> &nbsp; Kaç dosya <input type="number" class="ks-adet" min="1" value="10"></label>'
       + '<label>İstekler arası bekleme (sn) <input type="number" class="ks-ara" min="2" value="4"></label>'
       + '<button class="ks-b ks-basla" disabled>Başlat</button><button class="ks-b ks-ikincil ks-dur" disabled>Durdur</button><button class="ks-b ks-indir" disabled>Excel\'i indir</button>'
@@ -642,24 +846,23 @@
       try {
         okunan = await KS.excelOku(new Uint8Array(await f.arrayBuffer()));
         ad = f.name.replace(/\.xlsx$/i, '') + ' - Karar Sorgu.xlsx';
-        const bos = okunan.kayitlar.filter(function (x) { return !x.dolu; });
+        const bos = okunan.kayitlar.filter(function (x) { return !x.tamDolu || !x.kararTarihiVar; });
         if (bos.length) $('.ks-bas').value = bos[0].satir;
-        durum(okunan.kayitlar.length + ' dava okundu, ' + bos.length + ' tanesinin sütunları boş.');
+        $('.ks-adet').value = Math.max(1, bos.length);
+        durum(okunan.kayitlar.length + ' dava okundu, ' + bos.length + ' tanesi eksik (N–Y ya da karar tarihi).');
         $('.ks-basla').disabled = false;
       } catch (hata) { durum('Excel okunamadı: ' + hata.message, true); }
     };
     $('.ks-dur').onclick = function () { durdur = true; durum('Durduruluyor; süren istek bitince duracak.'); };
     $('.ks-indir').onclick = async function () {
-      const deg = {};
-      Object.keys(sonuclar).forEach(function (r) { if (sonuclar[r].hucre) deg[r] = sonuclar[r].hucre; });
-      const blob = await KS.excelYaz(okunan, deg);
+      const blob = await KS.excelYaz(okunan, KS.yazilacaklar(okunan, sonuclar));
       const a = d.createElement('a');
       a.href = URL.createObjectURL(blob); a.download = ad; d.body.appendChild(a); a.click();
       setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
     };
     $('.ks-basla').onclick = async function () {
       const bas = +$('.ks-bas').value || 2, adet = +$('.ks-adet').value || 10, yalnizBos = $('.ks-bos').checked;
-      const is = okunan.kayitlar.filter(function (x) { return x.satir >= bas && (!yalnizBos || !x.dolu); }).slice(0, adet);
+      const is = okunan.kayitlar.filter(function (x) { return x.satir >= bas && (!yalnizBos || !x.tamDolu || !x.kararTarihiVar); }).slice(0, adet);
       if (!is.length) { durum('Sorgulanacak satır yok.', true); return; }
       durdur = false;
       $('.ks-basla').disabled = true; $('.ks-dur').disabled = false; $('.ks-liste').innerHTML = '';
@@ -684,7 +887,7 @@
         const b = d.createElement('div');
         b.textContent = x.davali + ', ' + x.mahkeme + ' ' + x.esas + ': ' + s.ozet;
         li.appendChild(b);
-        if (h) { const t = d.createElement('div'); t.textContent = CIKTI.filter(function (c) { return h[c] !== undefined; }).map(function (c) { return c + ': ' + h[c]; }).join(' · '); li.appendChild(t); }
+        if (h) { const t = d.createElement('div'); t.textContent = (s.kararTarihi ? 'L: ' + s.kararTarihi + ' · ' : '') + CIKTI.filter(function (c) { return h[c] !== undefined; }).map(function (c) { return c + ': ' + h[c]; }).join(' · '); li.appendChild(t); }
         if (s.notlar && s.notlar.length) { const n = d.createElement('div'); n.className = 'ks-not'; n.textContent = s.notlar.join('; '); li.appendChild(n); }
         $('.ks-liste').appendChild(li);
         $('.ks-indir').disabled = false;
