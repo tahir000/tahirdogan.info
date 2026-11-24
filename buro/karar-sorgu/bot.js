@@ -21,7 +21,7 @@
   'use strict';
 
   const KS = {};
-  const SURUM = '1.1.1';
+  const SURUM = '1.1.2';
 
   /* ---------- Metin ve sayı ---------- */
   function metin(v) { return v === null || v === undefined ? '' : String(v).replace(/\s+/g, ' ').trim(); }
@@ -447,9 +447,10 @@
       });
     }
     const xml = await girdiMetni(bul(yol));
-    const satirlar = {};
+    const satirlar = {}, stiller = {};
     xml.replace(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g, function (m, at, ic) {
       const r = (at.match(/\br="([A-Z]+\d+)"/) || [])[1];
+      if (r) stiller[r] = (at.match(/\bs="(\d+)"/) || [])[1];
       if (!r || !ic) return m;
       const tur = (at.match(/\bt="([^"]+)"/) || [])[1];
       let v = null;
@@ -484,11 +485,14 @@
         tamDolu: CIKTI.every(function (c) { return metin(deger(c)) !== ''; }), kararTarihiVar: metin(deger('L')) !== ''
       });
     }
-    return { girdiler: g, sayfaYolu: yol, sayfaAdi: sayfaAdi, xml: xml, sutunlar: sut, kayitlar: kayitlar };
+    /* Karar tarihi yazılırken sütundaki ilk tarihli hücrenin biçimi kullanılır (yoksa sayı görünür) */
+    let tarihStili = null;
+    for (let r = 2; r <= enBuyuk && !tarihStili; r++) if (satirlar[r] && typeof satirlar[r][sut.L] === 'number' && stiller[sut.L + r]) tarihStili = stiller[sut.L + r];
+    return { girdiler: g, sayfaYolu: yol, sayfaAdi: sayfaAdi, xml: xml, sutunlar: sut, kayitlar: kayitlar, tarihStili: tarihStili };
   };
 
   /* Satırlara değer yazar; hücrenin biçimi (s) korunur. degerler: { satirNo: { N: 'YOK', R: 12.5, ... } } */
-  KS.sayfayaYaz = function (xml, sut, degerler) {
+  KS.sayfayaYaz = function (xml, sut, degerler, tarihStili) {
     Object.keys(degerler).forEach(function (rs) {
       const r = +rs, d = degerler[rs];
       const satirKalip = new RegExp('<row\\b[^>]*\\br="' + r + '"[^>]*?(?:/>|>([\\s\\S]*?)</row>)');
@@ -505,7 +509,7 @@
         const harf = sut[k] || k, ref = harf + r, v = d[k];
         const hk = new RegExp('<c\\b[^>]*\\br="' + ref + '"[^>]*?(?:/>|>[\\s\\S]*?</c>)');
         const eski = satirXml.match(hk);
-        const stil = eski ? (eski[0].match(/\bs="(\d+)"/) || [])[1] : null;
+        const stil = k === 'L' && tarihStili ? tarihStili : eski ? (eski[0].match(/\bs="(\d+)"/) || [])[1] : null;
         const sa = stil ? ' s="' + stil + '"' : '';
         const yeni = typeof v === 'number'
           ? '<c r="' + ref + '"' + sa + '><v>' + v + '</v></c>'
@@ -540,7 +544,7 @@
   };
 
   KS.excelYaz = async function (okunan, degerler) {
-    const xml = KS.sayfayaYaz(okunan.xml, okunan.sutunlar, degerler);
+    const xml = KS.sayfayaYaz(okunan.xml, okunan.sutunlar, degerler, okunan.tarihStili);
     const yeni = await girdiYap(okunan.sayfaYolu, xml);
     const girdiler = okunan.girdiler.map(function (g) { return g.ad === okunan.sayfaYolu ? yeni : g; });
     return zipYaz(girdiler);
@@ -548,7 +552,8 @@
 
   /* ---------- UYAP bağlantısı (yalnız sayfada) ---------- */
   const CAPTCHA = ['PRTL_GNL_100063', 'PRTL_GNL_100063-1'];
-  const OTURUM = ['PRTL_GNL_100026', 'PRTL_GNL_100026-1', 'PRTL_GNL_100032'];
+  /* FRM_GNL_10001: "Oturum zamanı aşıldı. Yeniden sisteme giriş yapılmalı." (24.11.2026, yaklaşık iki saatlik oturumdan sonra) */
+  const OTURUM = ['PRTL_GNL_100026', 'PRTL_GNL_100026-1', 'PRTL_GNL_100032', 'FRM_GNL_10001'];
   const MESGUL = 'PRTL_GNL_10001-61';
   function dur(kod, mesaj) { const e = new Error(mesaj || kod); e.kod = kod; return e; }
 
