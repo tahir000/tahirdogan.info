@@ -46,6 +46,28 @@
   const hk9 = KS.hukumCoz(KS.hukumAyikla('HÜKÜM; Yukarıda açıklanan nedenlerle; 1-Davanın AÇILMAMIŞ SAYILAMASINA, Dair kesin olmak üzere'));
   esit('Yazım hatalı "açılmamış sayılamasına"', [hk9.sonuc, hk9.kesin], ['AÇILMAMIŞ SAYILMASINA', true]);
 
+  /* 1.1.0: icra takip talebi, bilirkişi, karar tarihi, ad toleransı */
+  const takipXml = '<template><content><![CDATA[şablon]]></content><data><dosyaNo>2023/1</dosyaNo><alacakTaraf>DAVALI A.Ş.</alacakTaraf>'
+    + '<miktar>1.872,50</miktar><etiket>TL Asıl Alacak (Geçiş Ücreti-Para Cezası) (İstenen:%41.75 Yıllık Diğer)</etiket>'
+    + '<miktar>502,34</miktar><etiket>TL Faiz- (Ticari-Yıllık)</etiket><miktar>90,45</miktar><etiket>TL KDV</etiket>'
+    + '<miktar>2.465,29</miktar><etiket>TL Toplam Alacak</etiket><miktar>9,99</miktar><etiket>TL Toplam Alacak</etiket></data></template>';
+  const tt = KS.takipTalebiCoz(takipXml);
+  esit('Takip talebi verisi: asıl, faiz, KDV, toplam (ilk grup)', [tt.asil, tt.faiz, tt.kdv, tt.toplam], [1872.5, 502.34, 90.45, 2465.29]);
+
+  const hk10 = KS.hukumCoz(KS.hukumAyikla('HÜKÜM: 1-Davanın KISMEN KABULÜNE, takibin 2.442,25 TL alacak üzerinden devamına, fazlaya ilişkin istemin reddine,'));
+  esit('"… TL alacak" asıl alacak sayılmaz, ayrı tutulur', [hk10.kabul.asil, hk10.kabul.alacak], [null, 2442.25]);
+  const u = KS.bilirkisiUclu('… talep 1.872,50.- TL asıl alacak, 502,34.-Faiz, 90,45.- KDV … SONUÇ: 1.855,00 TL asıl alacak, 488,04 TL işlemiş faiz, 99,21 TL KDV olmak üzere toplam 2.442,25 TL', 2442.25);
+  esit('Bilirkişi raporunda kabul toplamını veren üçlü', u, { asil: 1855, faiz: 488.04, kdv: 99.21 });
+  Object.assign(hk10.kabul, { asil: 1855, faiz: 488.04, kdv: 99.21, toplam: 2442.25, alacak: null });
+  const c10 = KS.hucreler(KS.hesapla(tt, hk10), KS.asama([{ tur: 'Kesinleşme Şerhi' }], hk10));
+  esit('Takip talebi + bilirkişi ile kalem bazında red', [c10.N, c10.S, c10.T, c10.U, c10.V, c10.R], ['GEÇİŞ ÜCRETİ, GECİKME CEZASI, FAİZ', 14.3, 'YOK', 3.5, 14, 31.8]);
+
+  esit('Karar tarihi (başlık)', KS.kararTarihi('ESAS NO : 2023/1\nKARAR TARİHİ\t: 18/01/2024\n'), { metin: '18.01.2024', seri: 45309 });
+  esit('Mahkeme adı yazım hataları', [KS.mahkemeDuz('İST. 12. TÜKETİCİ.'), KS.mahkemeDuz('İstanbul 11. Asliye Ticaret Mahkemes ')], ['İSTANBUL 12. TÜKETİCİ', 'İSTANBUL 11. ASLİYE TİCARET']);
+  const liste = ['İstanbul 13. Tüketici Mahkemesi', 'İstanbul 3. Tüketici Mahkemesi', 'Bakırköy 13. Tüketici Mahkemesi'].map(function (a) { return { ad: a, duz: KS.mahkemeDuz(a) }; });
+  esit('En yakın mahkeme adı ("İSTANBUK 13.")', (KS.enYakin(liste, KS.mahkemeDuz('İSTANBUK 13. TÜKETİCİ')) || {}).ad, 'İstanbul 13. Tüketici Mahkemesi');
+  esit('Parantez içindeki eski mahkeme atlanır', [KS.yeniDeger('(İSTANBUL 2. TÜKETİCİ)\nİstanbul 7. Asliye Ticaret Mahkemesi'), KS.esasNo('(2025/812)\n2025/823').no], ['İstanbul 7. Asliye Ticaret Mahkemesi', '2025/823']);
+
   esit('Mahkeme adı eşleşmesi', KS.mahkemeDuz('İSTANBUL 5.TÜKETİCİ '), KS.mahkemeDuz('İstanbul 5. Tüketici Mahkemesi'));
   esit('Mahkeme türü kodu', [KS.birimTuru('İSTANBUL 4. ASLİYE TİCARET'), KS.birimTuru('İstanbul 5. Tüketici')], ['0902', '0912']);
   esit('Y/E hücresinde yeni esas', KS.esasNo('Y: 2023/252\nE: 2023/223').no, '2023/252');
