@@ -21,7 +21,7 @@
   'use strict';
 
   const KS = {};
-  const SURUM = '1.1.2';
+  const SURUM = '1.1.3';
 
   /* ---------- Metin ve sayı ---------- */
   function metin(v) { return v === null || v === undefined ? '' : String(v).replace(/\s+/g, ' ').trim(); }
@@ -218,6 +218,7 @@
     else if (/(KARAR\s+VERİLMESİNE|HÜKÜM\s+KURULMASINA|HÜKÜM\s+OLUŞTURULMASINA)\s+YER\s+OLMADIĞINA/.test(H) && !/AÇILMAMIŞ\s+SAYIL/.test(H)) r.sonuc = 'KARAR VERİLMESİNE YER OLMADIĞINA';
     else if (/AÇILMAMIŞ\s+SAYIL(A)?MASINA/.test(H)) r.sonuc = 'AÇILMAMIŞ SAYILMASINA';
     else if (/KONUSUZ\s+KAL/.test(H)) r.sonuc = 'KONUSUZ';
+    else if (/FERAGAT[^.;\n]{0,40}REDDİNE/.test(H)) r.sonuc = 'FERAGAT';
     else if (/(DAVANIN|DAVACININ\s+DAVASININ)\s+(ESASTAN\s+|USULDEN\s+|TAMAMEN\s+)?REDDİNE/.test(H)) r.sonuc = 'RED';
     else if (/KABULÜ(NE|\s+İLE)|KABULÜNE/.test(H)) r.sonuc = 'KABUL';
     /* Kabul edilen tutarlar "devamına" ya da "iptaline" ile biten maddenin tamamında aranır:
@@ -235,10 +236,13 @@
     const dev = madde(/DEVAMINA/) || madde(/İPTALİNE/);
     if (dev) {
       const c = dev[1];
-      r.kabul.asil = ilk(c, new RegExp(N + TL + '\\s*ASIL\\s*ALACAK'));
+      /* Tutar ile etiket arasında başka bir tutar geçmeden birkaç sözcük olabilir:
+         "2.870,00 TL geçiş ücreti ve 4 katı cezasına ilişkin asıl alacak", "121,02 TL işlemiş faizin KDV'si" */
+      const ara = '(?:(?!\\d{1,3}(?:\\.\\d{3})*,\\d{2})[\\s\\S])';
+      r.kabul.asil = ilk(c, new RegExp(N + TL + ara + '{0,80}?ASIL\\s*ALACAK'));
       r.kabul.alacak = r.kabul.asil === null ? ilk(c, new RegExp(N + TL + '\\s*ALACAK')) : null;
-      r.kabul.faiz = ilk(c, new RegExp(N + TL + '\\s*(?:TAKİP\\s*ÖNCESİ\\s*)?(?:İŞLEMİŞ\\s*)?FAİZ'));
-      r.kabul.kdv = ilk(c, new RegExp(N + TL + '\\s*(?:FAİZE\\s*İŞLEMİŞ\\s*)?KDV'));
+      r.kabul.faiz = ilk(c, new RegExp(N + TL + ara + '{0,30}?(?:TAKİP\\s*ÖNCESİ\\s*)?(?:İŞLEMİŞ\\s*)?FAİZ'));
+      r.kabul.kdv = ilk(c, new RegExp(N + TL + ara + '{0,40}?KDV'));
       r.kabul.toplam = ilk(c, new RegExp('TOPLAM\\s*' + N + TL));
       r.takipTalebindeki = /TAKİP\s+TALEBİNDEKİ|TAKİP\s+TALEBİNDE\s+GÖSTERİLEN|ÖDEME\s+EMRİNDEKİ|AYNEN/.test(c) || (!r.kabul.asil && !r.kabul.toplam && !r.kabul.alacak);
     }
@@ -254,7 +258,7 @@
   };
 
   /* ---------- Hesap ---------- */
-  const SONUCSUZ = ['KARAR VERİLMESİNE YER OLMADIĞINA', 'AÇILMAMIŞ SAYILMASINA', 'KONUSUZ'];
+  const SONUCSUZ = ['KARAR VERİLMESİNE YER OLMADIĞINA', 'AÇILMAMIŞ SAYILMASINA', 'KONUSUZ', 'FERAGAT'];
   KS.hesapla = function (t, hk) {
     const s = { S: 0, T: 0, U: 0, V: 0, W: 0, kalemler: [], faizKdv: [], notlar: [], tamam: true };
     if (!hk || !hk.sonuc) { s.tamam = false; s.notlar.push('Hüküm okunamadı'); return s; }
@@ -754,7 +758,12 @@
     };
     let hukum = '', kaynak = '', kt = null;
     const gk = tur(/GEREKÇELİ KARAR/);
-    if (gk.length) { const m = await oku(gk[0]); hukum = KS.hukumAyikla(m); kt = KS.kararTarihi(m); kaynak = 'gerekçeli karar ' + gk[0].tarih; }
+    let davaTuru = '';
+    if (gk.length) {
+      const m = await oku(gk[0]);
+      hukum = KS.hukumAyikla(m); kt = KS.kararTarihi(m); kaynak = 'gerekçeli karar ' + gk[0].tarih;
+      davaTuru = metin((m.match(/(?:^|\n)\s*DAVA\s*:\s*([^\n]{3,120})/i) || [])[1]);
+    }
     if (!hukum) {
       for (const z of tur(/DURUŞMA ZAPTI|KARAR DURUŞMA|KISA KARAR/).slice(0, 2)) {
         const m = await oku(z);
@@ -770,6 +779,11 @@
     }
     let hk = hukum ? KS.hukumCoz(hukum) : null;
     let blok = false;
+    /* Reddedilen kalem hesabı yalnız itirazın iptali davaları için anlamlı (istirdat, menfi tespit vb. değil) */
+    if (davaTuru && !/İTİRAZIN\s+İPTAL/.test(buyuk(davaTuru)) && hk && SONUCSUZ.indexOf(hk.sonuc) === -1) {
+      blok = true;
+      s.notlar.push('Dava türü "' + davaTuru + '"; itirazın iptali olmadığı için reddedilen kalem hesaplanmadı, elle bakın');
+    }
     /* Üst mahkeme kararı: başvuru reddedildiyse ilk derece kararı geçerli; kaldırıp yeniden hüküm kurduysa o hüküm esas alınır */
     const ust = tur(/İSTİNAF|BÖLGE ADLİYE|BAM|YARGITAY|TEMYİZ/).filter(function (e) { return /KARAR/.test(buyuk(e.tur)) && !/DİLEKÇE|TALEP|HARÇ|TEBLİ|MÜZEKKERE/.test(buyuk(e.tur)); });
     if (ust.length && hk && hk.sonuc) {
