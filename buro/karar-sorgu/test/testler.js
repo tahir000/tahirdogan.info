@@ -62,6 +62,13 @@
   const c10 = KS.hucreler(KS.hesapla(tt, hk10), KS.asama([{ tur: 'Kesinleşme Şerhi' }], hk10));
   esit('Takip talebi + bilirkişi ile kalem bazında red', [c10.N, c10.S, c10.T, c10.U, c10.V, c10.R], ['GEÇİŞ ÜCRETİ, GECİKME CEZASI, FAİZ', 14.3, 'YOK', 3.5, 14, 31.8]);
 
+  esit('Bilirkişi tablosu (₺, icra / hesaplanan sütunları)', KS.bilirkisiUclu('İcra Dosyası Hesaplanan İhlalli geçiş ₺371,00 Ceza ₺1.484,00 Toplam Asıl Alacak ₺1.872,50 ₺1.855,00 Faiz-Ticari-yıllık ₺502,34 ₺497,65 KDV ₺90,45 ₺89,60 TOPLAM ₺2.465,29 ₺2.442,25', 2442.25), { asil: 1855, faiz: 497.65, kdv: 89.6 });
+  const hk11 = KS.hukumCoz(KS.hukumAyikla('HÜKÜM: 1-a)Tahsilde tekerrür olmamak kaydıyla davalının itirazının 65-TL asıl alacak,12,50 TL işlemiş faiz ve 2,25 TL KDV olmak üzere toplam 79,75 TL alacak üzerinden iptali suretiyle takibin devamına, fazlaya ilişkin istemin reddine, 1-b-)Asıl Alacak üzerinden %20 icra inkar tazminatı 13- TL nin davalıdan tahsiline,'));
+  esit('Tutarlar "takibin"den önce: madde bütünüyle okunur', [hk11.kabul.asil, hk11.kabul.faiz, hk11.kabul.kdv, hk11.kabul.toplam, hk11.takipTalebindeki], [65, 12.5, 2.25, 79.75, false]);
+  const t11 = { asil: 1570, faiz: 274.9, kdv: 49.48, toplam: 1894.38, ucret: null, ceza: null, icraInkar: true };
+  const hk12 = KS.hukumCoz(KS.hukumAyikla('HÜKÜM: 1-Davanın KISMEN KABULÜ ile takibin 100,00 TL asıl alacak ve 20,00 TL işlemiş faiz üzerinden devamına, fazlaya ilişkin talebin reddine,'));
+  esit('Hükümde sayılmayan KDV reddedilir', KS.hucreler(KS.hesapla(t11, hk12), KS.asama([], hk12)).T, 49.48);
+
   esit('Karar tarihi (başlık)', KS.kararTarihi('ESAS NO : 2023/1\nKARAR TARİHİ\t: 18/01/2024\n'), { metin: '18.01.2024', seri: 45309 });
   esit('Mahkeme adı yazım hataları', [KS.mahkemeDuz('İST. 12. TÜKETİCİ.'), KS.mahkemeDuz('İstanbul 11. Asliye Ticaret Mahkemes ')], ['İSTANBUL 12. TÜKETİCİ', 'İSTANBUL 11. ASLİYE TİCARET']);
   const liste = ['İstanbul 13. Tüketici Mahkemesi', 'İstanbul 3. Tüketici Mahkemesi', 'Bakırköy 13. Tüketici Mahkemesi'].map(function (a) { return { ad: a, duz: KS.mahkemeDuz(a) }; });
