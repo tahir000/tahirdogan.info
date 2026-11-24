@@ -81,6 +81,9 @@
   });
   esit('Dava dosyası görünmezse icra dosyasındaki ilamdan', [ilamS.hucre.R, ilamS.hucre.S, ilamS.hucre.T, ilamS.hucre.U, ilamS.hucre.V, ilamS.hucre.X, ilamS.kararTarihi], [62, 10, 2, 10, 40, 'KESİNLEŞTİ', '05.03.2024']);
   esit('Sonuç 1. maddeden: sonraki "karar verilmesine yer olmadığına" kabulü bastırmaz', KS.hukumCoz(KS.hukumAyikla('HÜKÜM: 1-Davacının davasının KABULÜ ile, itirazının iptaline, 2-Asıl alacağın %20\'si oranında icra inkar tazminatının davalıdan alınmasına, 3-Fazla yatırılan harç hakkında karar verilmesine yer olmadığına,')).sonuc, 'KABUL');
+  const hk16 = KS.hukumCoz(KS.hukumAyikla('HÜKÜM: 1-Mahkememizin görevli olmasına ilişkin dava şartı noksanlığı bulunduğundan davanın USULDEN REDDİNE, 2-dosyanın görevli İSTANBUL ASLİYE TİCARET MAHKEMESİNE GÖNDERİLMESİNE,'));
+  esit('Görevsizlik / usulden ret esasa girilmemiş: kalem yazılmaz', [hk16.sonuc, KS.hucreler(KS.hesapla(t, hk16), KS.asama([], hk16)).R], ['USULDEN RED', 'YOK']);
+  esit('"İtirazın kısmen iptaline" kısmen kabuldür', KS.hukumCoz(KS.hukumAyikla('HÜKÜM: 1-davalının itirazının KISMEN İPTALİNE takibin 100,00-TL asıl alacak üzerinden devamına,')).sonuc, 'KISMEN KABUL');
   esit('Feragat nedeniyle ret esasa girilmemiş sayılır', KS.hukumCoz(KS.hukumAyikla('HÜKÜM: 1-Davanın feragat nedeni ile reddine,')).sonuc, 'FERAGAT');
 
   esit('Karar tarihi (başlık)', KS.kararTarihi('ESAS NO : 2023/1\nKARAR TARİHİ\t: 18/01/2024\n'), { metin: '18.01.2024', seri: 45309 });
