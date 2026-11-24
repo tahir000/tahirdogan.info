@@ -69,6 +69,10 @@
   const hk12 = KS.hukumCoz(KS.hukumAyikla('HÜKÜM: 1-Davanın KISMEN KABULÜ ile takibin 100,00 TL asıl alacak ve 20,00 TL işlemiş faiz üzerinden devamına, fazlaya ilişkin talebin reddine,'));
   esit('Hükümde sayılmayan KDV reddedilir', KS.hucreler(KS.hesapla(t11, hk12), KS.asama([], hk12)).T, 49.48);
 
+  const hk13 = KS.hukumCoz(KS.hukumAyikla('Yukarıda açıklanan nedenlerle; 1) DAVANIN KISMEN KABULÜ İLE; davalının takip dosyasına vaki itirazının, 2.870,00 TL geçiş ücreti ve 4 katı cezasına ilişkin asıl alacak, 672,34 TL işlemiş faiz, 121,02 TL işlemiş faizin KDV\'si olmak üzere toplam 3.663,36 TL alacak yönünden İPTALİNE, Takibin toplam 3.663,36 TL alacak üzerinden ve 2.870,00 TL asıl alacağa takip tarihinden itibaren avans faizi uygulanmak suretiyle DEVAMINA, Fazlaya dair istemin REDDİNE,'));
+  esit('Etiketten önce sözcükler: "… cezasına ilişkin asıl alacak", "faizin KDV\'si"', [hk13.kabul.asil, hk13.kabul.faiz, hk13.kabul.kdv, hk13.kabul.toplam], [2870, 672.34, 121.02, 3663.36]);
+  esit('Feragat nedeniyle ret esasa girilmemiş sayılır', KS.hukumCoz(KS.hukumAyikla('HÜKÜM: 1-Davanın feragat nedeni ile reddine,')).sonuc, 'FERAGAT');
+
   esit('Karar tarihi (başlık)', KS.kararTarihi('ESAS NO : 2023/1\nKARAR TARİHİ\t: 18/01/2024\n'), { metin: '18.01.2024', seri: 45309 });
   esit('Mahkeme adı yazım hataları', [KS.mahkemeDuz('İST. 12. TÜKETİCİ.'), KS.mahkemeDuz('İstanbul 11. Asliye Ticaret Mahkemes ')], ['İSTANBUL 12. TÜKETİCİ', 'İSTANBUL 11. ASLİYE TİCARET']);
   const liste = ['İstanbul 13. Tüketici Mahkemesi', 'İstanbul 3. Tüketici Mahkemesi', 'Bakırköy 13. Tüketici Mahkemesi'].map(function (a) { return { ad: a, duz: KS.mahkemeDuz(a) }; });
