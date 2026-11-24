@@ -94,6 +94,8 @@ footer { padding-bottom: 30px; color: var(--soluk); font-size: 13px; }
 <ul>
 <li class="uyari">Hüküm ya da dilekçe okunamazsa, dosyada ıslah varsa ya da ek karar sonucu değiştirmiş olabilirse bot N–W hücrelerini boş bırakır, yalnız X ve Y'yi yazar; nedeni panelde turuncu not olarak görünür.</li>
 <li>Hükümde yalnız "takibin … TL asıl alacak üzerinden devamına" yazıyorsa işlemiş faiz ve KDV reddedilmiş sayılır; panelde bu not düşülür.</li>
+<li>Dilekçede asıl alacak, faiz ve KDV ayrı yazılmamışsa (yalnız harca esas değer varsa): kabul kararında hükümdeki tutarlar talep sayılır; kısmen kabul ve redde kalemler ayrılamaz, N–W boş kalır ve toplam reddedilen tutar notta yazar.</li>
+<li>Hükümde icra inkâr tazminatına hiç değinilmemişse talep reddedilmiş sayılır ve notta belirtilir.</li>
 <li>Dosya istinaf ya da temyize gitmişse ilk derece kararı okunur; üst mahkeme sonucu değiştirdiyse elle düzeltin.</li>
 </ul>
 </section>
@@ -109,7 +111,7 @@ footer { padding-bottom: 30px; color: var(--soluk); font-size: 13px; }
 
 </main>
 <footer class="kap">
-<p>Sürüm 1.0.0 · Kasım 2026 · <a href="test/test.html">Testler</a></p>
+<p>Sürüm 1.0.1 ·Kasım 2026 · <a href="test/test.html">Testler</a></p>
 </footer>
 </body>
 </html>

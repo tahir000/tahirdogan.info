@@ -21,7 +21,7 @@
   'use strict';
 
   const KS = {};
-  const SURUM = '1.0.0';
+  const SURUM = '1.0.1';
 
   /* ---------- Metin ve sayı ---------- */
   function metin(v) { return v === null || v === undefined ? '' : String(v).replace(/\s+/g, ' ').trim(); }
@@ -95,7 +95,7 @@
     r.ucret = ilk(bolum, new RegExp(N + TL + '\\s*(?:ihlalli\\s*)?geçiş\\s*ücreti', 'i'));
     r.ceza = ilk(bolum, new RegExp(N + TL + '\\s*(?:gecikme\\s*|idari\\s*para\\s*)?ceza', 'i'));
     const ii = bolum.match(/%\s*(\d{1,2})[^.]{0,80}?icra\s*ink[aâ]r|icra\s*ink[aâ]r[^.]{0,120}?%\s*(\d{1,2})/i);
-    r.icraInkar = /icra\s*ink[aâ]r/i.test(bolum);
+    r.icraInkar = /icra\s*ink[aâ]r/i.test(bolum) || /icra\s*ink[aâ]r/i.test(T);
     if (ii) r.icraInkarOran = +(ii[1] || ii[2]);
     if (r.asil !== null && r.toplam !== null && r.faiz === null && r.kdv === null && Math.abs(r.asil - r.toplam) < 0.01) { r.faiz = 0; r.kdv = 0; }
     if (r.asil !== null && r.toplam !== null && r.faiz !== null && r.kdv === null && Math.abs(r.asil + r.faiz - r.toplam) < 0.01) r.kdv = 0;
@@ -110,7 +110,7 @@
   /* ---------- Hüküm ---------- */
   KS.hukumAyikla = function (ham) {
     const s = String(ham || '');
-    const re = /H\s*Ü\s*K\s*Ü\s*M\s*[\/:\-]|Yukarıda\s+açıklanan\s+nedenlerle|Gerekçesi\s+yukarıda\s+açıklandığı\s+üzere|Açıklanan\s+nedenlerle/gi;
+    const re = /H\s*Ü\s*K\s*Ü\s*M\s*[\/:\-;]|Yukarıda\s+açıklanan\s+nedenlerle|Gerekçesi\s+yukarıda\s+açıklandığı\s+üzere|Açıklanan\s+nedenlerle/gi;
     let son = -1, x;
     while ((x = re.exec(s))) son = x.index;
     if (son < 0) return '';
@@ -125,8 +125,8 @@
     const r = { sonuc: null, kabul: { asil: null, faiz: null, kdv: null, toplam: null }, red: {}, takipTalebindeki: false, kesin: false, takipSonrasiFaizKabul: false };
     if (!H) return r;
     if (/KISMEN\s+KABUL/.test(H)) r.sonuc = 'KISMEN KABUL';
-    else if (/KARAR\s+VERİLMESİNE\s+YER\s+OLMADIĞINA/.test(H)) r.sonuc = 'KARAR VERİLMESİNE YER OLMADIĞINA';
-    else if (/AÇILMAMIŞ\s+SAYILMASINA/.test(H)) r.sonuc = 'AÇILMAMIŞ SAYILMASINA';
+    else if (/(KARAR\s+VERİLMESİNE|HÜKÜM\s+KURULMASINA|HÜKÜM\s+OLUŞTURULMASINA)\s+YER\s+OLMADIĞINA/.test(H) && !/AÇILMAMIŞ\s+SAYIL/.test(H)) r.sonuc = 'KARAR VERİLMESİNE YER OLMADIĞINA';
+    else if (/AÇILMAMIŞ\s+SAYIL(A)?MASINA/.test(H)) r.sonuc = 'AÇILMAMIŞ SAYILMASINA';
     else if (/KONUSUZ\s+KAL/.test(H)) r.sonuc = 'KONUSUZ';
     else if (/(DAVANIN|DAVACININ\s+DAVASININ)\s+(ESASTAN\s+|USULDEN\s+|TAMAMEN\s+)?REDDİNE/.test(H)) r.sonuc = 'RED';
     else if (/KABULÜ(NE|\s+İLE)|KABULÜNE/.test(H)) r.sonuc = 'KABUL';
@@ -140,7 +140,7 @@
       r.takipTalebindeki = /TAKİP\s+TALEBİNDEKİ|TAKİP\s+TALEBİNDE\s+GÖSTERİLEN|ÖDEME\s+EMRİNDEKİ|AYNEN/.test(c) || (!r.kabul.asil && !r.kabul.toplam);
     }
     r.red.icraInkar = /İCRA\s*İNKAR[^.;\n]{0,120}REDDİNE/.test(H);
-    r.kabulIcraInkar = /İCRA\s*İNKAR/.test(H) && !r.red.icraInkar;
+    r.icraInkarAnilmadi = !/İCRA\s*İNKAR/.test(H);
     r.red.fazla = /FAZLAYA\s+İLİŞKİN[^.;\n]{0,60}REDDİNE/.test(H);
     r.red.faiz = /(İŞLEMİŞ\s+)?FAİZ(?!E\s+İŞLEMİŞ)[^.;\n]{0,60}TALEB[^.;\n]{0,30}REDDİNE/.test(H);
     r.red.kdv = /KDV[^.;\n]{0,60}REDDİNE/.test(H);
@@ -157,10 +157,21 @@
     if (!hk || !hk.sonuc) { s.tamam = false; s.notlar.push('Hüküm okunamadı'); return s; }
     if (SONUCSUZ.indexOf(hk.sonuc) !== -1) { s.notlar.push('Esas hakkında karar yok (' + hk.sonuc.toLocaleLowerCase('tr') + '); reddedilen kalem yazılmadı'); return s; }
     const k = hk.kabul;
-    const talepVar = t && t.asil !== null;
-    if (!talepVar) {
-      if (hk.sonuc === 'KABUL' && hk.takipTalebindeki && !hk.red.icraInkar && !hk.red.faiz && !hk.red.kdv && !hk.red.takipSonrasiFaiz && !hk.red.fazla) return s;
-      s.tamam = false; s.notlar.push('Dava dilekçesindeki talep tutarları okunamadı'); return s;
+    if (!t || t.asil === null) {
+      const temiz = !hk.red.icraInkar && !hk.red.faiz && !hk.red.kdv && !hk.red.takipSonrasiFaiz && !hk.red.fazla;
+      if (hk.sonuc === 'KABUL' && k.asil !== null) {
+        /* Kabul kararında talep, hükümde kabul edilen tutara eşittir */
+        t = { asil: k.asil, faiz: k.faiz || 0, kdv: k.kdv || 0, ucret: null, ceza: null, toplam: null, icraInkar: t ? t.icraInkar : true, icraInkarOran: (t && t.icraInkarOran) || 20 };
+        s.notlar.push('Dilekçede kalemler ayrı yazılmamış; kabul kararı olduğundan hükümdeki tutarlar talep sayıldı');
+      } else if (hk.sonuc === 'KABUL' && hk.takipTalebindeki && temiz && !(hk.icraInkarAnilmadi && t && t.icraInkar)) {
+        return s;
+      } else {
+        s.tamam = false;
+        const kt = k.toplam !== null ? k.toplam : (k.asil !== null && k.faiz === null && k.kdv === null ? k.asil : null);
+        if (t && t.toplam !== null && kt !== null) s.notlar.push('Talep toplamı ' + t.toplam + ' TL, kabul edilen ' + kt + ' TL: reddedilen yaklaşık ' + yuvarla(t.toplam - kt) + ' TL. Dilekçede asıl alacak, faiz ve KDV ayrı yazılmadığı için kalemler ayrılamadı; elle bakın');
+        else s.notlar.push('Dava dilekçesindeki talep kalemleri okunamadı; elle bakın');
+        return s;
+      }
     }
     const tf = t.faiz || 0, tk = t.kdv || 0;
     let ra = 0, rf = 0, rk = 0;
@@ -186,8 +197,10 @@
       else { s.U = yuvarla(ra / 5); s.V = yuvarla(ra - s.U); s.notlar.push('Reddedilen asıl alacak geçiş ücreti ve cezaya 1/4 oranıyla ayrıldı'); }
     }
     s.S = rf; s.T = rk;
-    if ((hk.red.icraInkar || hk.sonuc === 'RED') && t.icraInkar) {
+    const anilmadi = hk.icraInkarAnilmadi && (hk.sonuc === 'KABUL' || hk.sonuc === 'KISMEN KABUL');
+    if ((hk.red.icraInkar || hk.sonuc === 'RED' || anilmadi) && t.icraInkar) {
       s.W = yuvarla(t.asil * (t.icraInkarOran || 20) / 100);
+      if (anilmadi) s.notlar.push('Hükümde icra inkâr tazminatına hükmedilmemiş; talep reddedilmiş sayıldı');
       s.notlar.push('Reddedilen icra inkâr tazminatı talep edilen asıl alacağın %' + (t.icraInkarOran || 20) + '\'si olarak hesaplandı');
     }
     if (s.U > 0) s.kalemler.push('GEÇİŞ ÜCRETİ');
@@ -587,7 +600,10 @@
         if (/TALEBİN(İN)?\s+REDDİNE/.test(karar) && !/KABULÜNE|DÜZELTİLMESİNE/.test(karar)) s.notlar.push('Ek karar (' + e.tarih + ') talebi reddetmiş; sonuç değişmedi');
         else { h.tamam = false; s.notlar.push('Ek karar (' + e.tarih + ') sonucu değiştirmiş olabilir; elle bakın'); }
       }
-      if (tur(/ISLAH/).length) { h.tamam = false; s.notlar.push('Dosyada ıslah var; talep tutarı değişmiş olabilir, elle bakın'); }
+      if (tur(/ISLAH/).length) {
+        if (h.tamam && h.S + h.T + h.U + h.V + h.W > 0) { h.tamam = false; s.notlar.push('Dosyada ıslah var; talep tutarı değişmiş olabilir, elle bakın'); }
+        else s.notlar.push('Dosyada ıslah var');
+      }
       if (a.ustMahkeme || a.Y === 'İSTİNAF' || a.Y === 'TEMYİZ') s.notlar.push('Dosya üst mahkemeye gitmiş; üst mahkeme kararı sonucu değiştirmiş olabilir');
     }
     s.notlar = s.notlar.concat(h.notlar || []);
