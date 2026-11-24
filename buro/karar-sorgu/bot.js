@@ -21,7 +21,7 @@
   'use strict';
 
   const KS = {};
-  const SURUM = '1.1.0';
+  const SURUM = '1.1.1';
 
   /* ---------- Metin ve sayı ---------- */
   function metin(v) { return v === null || v === undefined ? '' : String(v).replace(/\s+/g, ' ').trim(); }
@@ -173,13 +173,20 @@
 
   /* Bilirkişi raporunda, kabul edilen toplamı veren asıl alacak + faiz + KDV üçlüsü (son geçen tercih edilir) */
   KS.bilirkisiUclu = function (ham, toplam) {
-    const T = metin(ham);
+    /* "Asıl Alacak ₺1.872,50 ₺1.855,00" gibi tablolarda (icra / hesaplanan) etiketten sonra iki tutar gelir */
+    const T = metin(ham).replace(/₺\s*(?=\d)/g, '');
+    /* Düz yazıda "488,04 TL işlemiş faiz" tutarı sonraki etikete aittir; tabloda (TL'siz) değil */
+    const sonra = '(?!\\d)(?!\\s*\\.?\\s*-?\\s*(?:TL|₺|\\.-|-)[.\\-\\s]*\\(?\\s*(?:asıl|faiz|işlemiş|kdv))';
     const topla = function (kalip) {
       const l = []; let x;
-      const re1 = new RegExp(N + TL + '?\\s*\\(?\\s*(?:' + kalip + ')', 'gi');
-      const re2 = new RegExp('(?:' + kalip + ')(?:\\s*\\([^)]{0,30}\\))?[\\s:]{1,6}' + N + '(?!\\s*(?:TL|₺)?\\s*(?:asıl|faiz|işlemiş|KDV))', 'gi');
+      const re1 = new RegExp(N + '(?!\\d)' + TL + '?[.\\-\\s]*\\(?\\s*(?:' + kalip + ')', 'gi');
+      const re2 = new RegExp('(?:' + kalip + ')([^0-9]{0,25}?)' + N + sonra + '(?:\\s+' + N + sonra + ')?', 'gi');
       while ((x = re1.exec(T))) l.push({ n: sayi(x[1]), i: x.index });
-      while ((x = re2.exec(T))) l.push({ n: sayi(x[1]), i: x.index });
+      while ((x = re2.exec(T))) {
+        if (/asıl|faiz|kdv/i.test(x[1])) continue;
+        l.push({ n: sayi(x[2]), i: x.index });
+        if (x[3]) l.push({ n: sayi(x[3]), i: x.index + 1 });
+      }
       return l.filter(function (y) { return y.n !== null; }).sort(function (a, b) { return b.i - a.i; }).slice(0, 40);
     };
     const A = topla('asıl\\s*alacak'), F = topla('(?:işlemiş\\s*)?faiz'), K = topla('KDV');
@@ -213,7 +220,19 @@
     else if (/KONUSUZ\s+KAL/.test(H)) r.sonuc = 'KONUSUZ';
     else if (/(DAVANIN|DAVACININ\s+DAVASININ)\s+(ESASTAN\s+|USULDEN\s+|TAMAMEN\s+)?REDDİNE/.test(H)) r.sonuc = 'RED';
     else if (/KABULÜ(NE|\s+İLE)|KABULÜNE/.test(H)) r.sonuc = 'KABUL';
-    const dev = H.match(/TAKİBİN([\s\S]{0,500}?)DEVAMINA/) || H.match(/İTİRAZIN([\s\S]{0,400}?)İPTALİNE/);
+    /* Kabul edilen tutarlar "devamına" ya da "iptaline" ile biten maddenin tamamında aranır:
+       "itirazının 65-TL asıl alacak, … toplam 79,75 TL alacak üzerinden iptali suretiyle takibin devamına" */
+    const madde = function (bitis) {
+      const j = H.search(bitis);
+      if (j < 0) return null;
+      let c = H.slice(Math.max(0, j - 600), j);
+      const re = /(?:^|[\s;])\d{1,2}\s*-(?!\s*\.?\s*(?:TL|₺))\s*(?:[A-ZÇĞİÖŞÜa-z]\s*-?\)?-?)?/g;
+      let x, son = -1;
+      while ((x = re.exec(c))) son = x.index;
+      if (son >= 0) c = c.slice(son);
+      return [null, c];
+    };
+    const dev = madde(/DEVAMINA/) || madde(/İPTALİNE/);
     if (dev) {
       const c = dev[1];
       r.kabul.asil = ilk(c, new RegExp(N + TL + '\\s*ASIL\\s*ALACAK'));
@@ -273,12 +292,13 @@
       } else if (hk.sonuc === 'KISMEN KABUL' && !hk.takipTalebindeki) {
         s.tamam = false; s.notlar.push('Kısmen kabul, ama kabul edilen tutar hükümden okunamadı');
       }
-      const yalnizAsil = k.asil !== null && k.faiz === null && k.kdv === null && !hk.takipTalebindeki;
+      /* Hüküm kalemleri tek tek sayıyorsa, sayılmayan faiz ya da KDV reddedilmiştir */
+      const listeli = k.asil !== null && !hk.takipTalebindeki;
       if (k.faiz !== null) rf = Math.max(0, tf - k.faiz);
-      else if (hk.red.faiz || (yalnizAsil && tf > 0)) rf = tf;
+      else if (hk.red.faiz || (listeli && tf > 0)) rf = tf;
       if (k.kdv !== null) rk = Math.max(0, tk - k.kdv);
-      else if (hk.red.kdv || (yalnizAsil && tk > 0) || (rf >= tf && tf > 0 && tk > 0 && k.faiz === null)) rk = tk;
-      if (yalnizAsil && (tf > 0 || tk > 0)) s.notlar.push('Hüküm yalnız asıl alacak üzerinden devam diyor; işlemiş faiz ve KDV reddedilmiş sayıldı');
+      else if (hk.red.kdv || (listeli && tk > 0) || (rf >= tf && tf > 0 && tk > 0 && k.faiz === null)) rk = tk;
+      if (listeli && ((k.faiz === null && tf > 0) || (k.kdv === null && tk > 0))) s.notlar.push('Hükümde sayılmayan ' + [k.faiz === null && tf > 0 ? 'işlemiş faiz' : '', k.kdv === null && tk > 0 ? 'KDV' : ''].filter(Boolean).join(' ve ') + ' reddedilmiş sayıldı');
       if (hk.sonuc === 'KABUL' && (ra > 0 || rf > 0 || rk > 0)) s.notlar.push('Hüküm "kabul" diyor ama kabul edilen tutar talepten az');
     }
     ra = yuvarla(ra); rf = yuvarla(rf); rk = yuvarla(rk);
@@ -719,7 +739,7 @@
   KS.dosyaSorgula = async function (bag, k) {
     const s = { satir: k.satir, dosya: k.mahkeme + ' ' + k.esas, notlar: [], hucre: null, ozet: '' };
     const d = await bag.dosyaBul(k.mahkeme, k.esas);
-    if (!d) { s.ozet = 'UYAP\'ta bulunamadı (açık ve kapalı dosyalarda)'; return s; }
+    if (!d) { s.ozet = 'UYAP\'ta bulunamadı (açık ve kapalı dosyalarda; dosyada oturum açan avukat vekil olmayabilir)'; return s; }
     s.dosyaDurum = d.dosyaDurum;
     const ev = await bag.evraklar(d);
     const tur = function (re) { return ev.filter(function (e) { return re.test(buyuk(e.tur)); }); };
@@ -736,6 +756,12 @@
         hukum = KS.hukumAyikla(m);
         if (hukum) { kaynak = 'kısa karar (' + z.tur + ' ' + z.tarih + ')'; kt = kt || KS.kararTarihi(m) || KS.tarihSeri(z.tarih); s.notlar.push('Gerekçeli karar yok; kısa karardan okundu'); break; }
       }
+    }
+    if (k.yalnizTarih) {
+      s.hucre = kt ? { L: kt.seri } : null;
+      s.kararTarihi = kt && kt.metin;
+      s.ozet = kt ? 'N–Y dolu; yalnız karar tarihi okundu (' + kaynak + ')' : 'Karar tarihi okunamadı';
+      return s;
     }
     let hk = hukum ? KS.hukumCoz(hukum) : null;
     let blok = false;
@@ -875,7 +901,7 @@
         const li = d.createElement('li');
         li.value = x.satir;
         let s;
-        try { s = await KS.dosyaSorgula(bag, x); }
+        try { s = await KS.dosyaSorgula(bag, Object.assign({}, x, { yalnizTarih: x.tamDolu && !x.kararTarihiVar })); }
         catch (hata) {
           if (hata.kod === 'OTURUM' || hata.kod === 'CAPTCHA' || hata.kod === 'KISIT') { durum(hata.message + '. Bot durdu; yeniden giriş yapıp kalan satırlardan devam edin.', true); break; }
           s = { satir: x.satir, ozet: (hata.kod === 'ATLA' ? 'Atlandı: ' : 'Hata: ') + hata.message, notlar: [], hucre: null };
