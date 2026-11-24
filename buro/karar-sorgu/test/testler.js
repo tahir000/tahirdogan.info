@@ -71,6 +71,9 @@
 
   const hk13 = KS.hukumCoz(KS.hukumAyikla('Yukarıda açıklanan nedenlerle; 1) DAVANIN KISMEN KABULÜ İLE; davalının takip dosyasına vaki itirazının, 2.870,00 TL geçiş ücreti ve 4 katı cezasına ilişkin asıl alacak, 672,34 TL işlemiş faiz, 121,02 TL işlemiş faizin KDV\'si olmak üzere toplam 3.663,36 TL alacak yönünden İPTALİNE, Takibin toplam 3.663,36 TL alacak üzerinden ve 2.870,00 TL asıl alacağa takip tarihinden itibaren avans faizi uygulanmak suretiyle DEVAMINA, Fazlaya dair istemin REDDİNE,'));
   esit('Etiketten önce sözcükler: "… cezasına ilişkin asıl alacak", "faizin KDV\'si"', [hk13.kabul.asil, hk13.kabul.faiz, hk13.kabul.kdv, hk13.kabul.toplam], [2870, 672.34, 121.02, 3663.36]);
+  const hk14 = KS.hukumCoz(KS.hukumAyikla('HÜKÜM: 1-DAVANIN KISMEN KABULÜ İLE, itirazın kısmen iptaline, takibe 10.800,00 TL geçiş ücreti asıl alacağı, 655,10 TL işlemiş faiz, 131,02 TL işlemiş faiz KDV\'si olmak üzere toplam 11.586,12 TL üzerinden devamına,'));
+  const hk15 = KS.hukumCoz(KS.hukumAyikla('HÜKÜM: 1-Davanın KISMEN KABULÜ ile itirazın kısmen iptaline, 2-Takibin 12.582,50 TL geçiş ücreti, 817,98 TL işlemiş faiz, 162,91 TL KDV olmak üzere toplam 13.563,39 TL üzerinden devamına,'));
+  esit('"asıl alacağı" ve yalnız "geçiş ücreti" yazan hükümler', [hk14.kabul.asil, hk14.kabul.faiz, hk14.kabul.kdv, hk15.kabul.asil, hk15.kabul.faiz, hk15.kabul.kdv], [10800, 655.1, 131.02, 12582.5, 817.98, 162.91]);
   esit('Feragat nedeniyle ret esasa girilmemiş sayılır', KS.hukumCoz(KS.hukumAyikla('HÜKÜM: 1-Davanın feragat nedeni ile reddine,')).sonuc, 'FERAGAT');
 
   esit('Karar tarihi (başlık)', KS.kararTarihi('ESAS NO : 2023/1\nKARAR TARİHİ\t: 18/01/2024\n'), { metin: '18.01.2024', seri: 45309 });
