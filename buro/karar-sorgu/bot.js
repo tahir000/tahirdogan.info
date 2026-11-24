@@ -21,7 +21,7 @@
   'use strict';
 
   const KS = {};
-  const SURUM = '1.2.0';
+  const SURUM = '1.2.1';
 
   /* ---------- Metin ve sayı ---------- */
   function metin(v) { return v === null || v === undefined ? '' : String(v).replace(/\s+/g, ' ').trim(); }
@@ -214,13 +214,20 @@
     const H = buyuk(h).replace(/İNKÂR/g, 'İNKAR');
     const r = { sonuc: null, kabul: { asil: null, faiz: null, kdv: null, toplam: null }, red: {}, takipTalebindeki: false, kesin: false, takipSonrasiFaizKabul: false };
     if (!H) return r;
-    if (/KISMEN\s+KABUL/.test(H)) r.sonuc = 'KISMEN KABUL';
-    else if (/(KARAR\s+VERİLMESİNE|HÜKÜM\s+KURULMASINA|HÜKÜM\s+OLUŞTURULMASINA)\s+YER\s+OLMADIĞINA/.test(H) && !/AÇILMAMIŞ\s+SAYIL/.test(H)) r.sonuc = 'KARAR VERİLMESİNE YER OLMADIĞINA';
-    else if (/AÇILMAMIŞ\s+SAYIL(A)?MASINA/.test(H)) r.sonuc = 'AÇILMAMIŞ SAYILMASINA';
-    else if (/KONUSUZ\s+KAL/.test(H)) r.sonuc = 'KONUSUZ';
-    else if (/FERAGAT[^.;\n]{0,40}REDDİNE/.test(H)) r.sonuc = 'FERAGAT';
-    else if (/(DAVANIN|DAVACININ\s+DAVASININ)\s+(ESASTAN\s+|USULDEN\s+|TAMAMEN\s+)?REDDİNE/.test(H)) r.sonuc = 'RED';
-    else if (/KABULÜ(NE|\s+İLE)|KABULÜNE/.test(H)) r.sonuc = 'KABUL';
+    const sonucBul = function (T) {
+      if (/KISMEN\s+KABUL/.test(T)) return 'KISMEN KABUL';
+      if (/(KARAR\s+VERİLMESİNE|HÜKÜM\s+KURULMASINA|HÜKÜM\s+OLUŞTURULMASINA)\s+YER\s+OLMADIĞINA/.test(T) && !/AÇILMAMIŞ\s+SAYIL/.test(T)) return 'KARAR VERİLMESİNE YER OLMADIĞINA';
+      if (/AÇILMAMIŞ\s+SAYIL(A)?MASINA/.test(T)) return 'AÇILMAMIŞ SAYILMASINA';
+      if (/KONUSUZ\s+KAL/.test(T)) return 'KONUSUZ';
+      if (/FERAGAT[^.;\n]{0,40}REDDİNE/.test(T)) return 'FERAGAT';
+      if (/(DAVANIN|DAVACININ\s+DAVASININ)\s+(ESASTAN\s+|USULDEN\s+|TAMAMEN\s+)?REDDİNE/.test(T)) return 'RED';
+      if (/KABULÜ(NE|\s+İLE)|KABULÜNE/.test(T)) return 'KABUL';
+      return null;
+    };
+    /* Sonuç önce hükmün 1. maddesinden okunur: sonraki maddelerde geçen "… hakkında karar verilmesine yer olmadığına"
+       gibi ifadeler asıl sonucu (kabul) bastırmasın */
+    const birinci = (H.match(/(?:^|[\s;:])1\s*[-)]\s*([\s\S]*?)(?=[\s;,]2\s*[-)]\s*[A-ZÇĞİÖŞÜ]|$)/) || [])[1];
+    r.sonuc = (birinci && sonucBul(birinci)) || sonucBul(H);
     /* Kabul edilen tutarlar "devamına" ya da "iptaline" ile biten maddenin tamamında aranır:
        "itirazının 65-TL asıl alacak, … toplam 79,75 TL alacak üzerinden iptali suretiyle takibin devamına" */
     const madde = function (bitis) {
