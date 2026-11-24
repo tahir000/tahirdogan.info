@@ -34,6 +34,18 @@
   const hk6 = KS.hukumCoz('');
   esit('Hüküm okunamazsa yalnız X ve Y yazılır', Object.keys(KS.hucreler(KS.hesapla(t, hk6), KS.asama([], hk6))), ['X', 'Y']);
 
+  const yalnizToplam = KS.talepCoz('DAVA : İtirazın iptali ile takibin devamına ve %20 icra inkar tazminatına hükmedilmesi istemidir. HARCA ESAS DEĞER : 2.316,13 TL');
+  const hk7 = KS.hukumCoz(KS.hukumAyikla('HÜKÜM; Yukarıda açıklanan nedenlerle; 1-Davanın KABULÜNE, 2-itirazın iptaline, 3-Takibin 847,50-TL asıl alacak, 160,30-TL faiz ve 28,85-TL KDV olmak üzere toplam 1.036,65-TL üzerinden devamına, 4-Şartları oluşmadığından icra inkar tazminatı talebinin reddine,'));
+  const c7 = KS.hucreler(KS.hesapla(yalnizToplam, hk7), KS.asama([], hk7));
+  esit('Kabul, dilekçede yalnız toplam: hükümdeki asıl alacaktan icra inkâr', [c7.N, c7.W, c7.R], ['İCRA İNKAR', 169.5, 169.5]);
+
+  const hk8 = KS.hukumCoz(KS.hukumAyikla('HÜKÜM; Yukarıda açıklanan nedenlerle; 1-Davanın KISMEN KABULÜNE, takibin 2.442,25 TL alacak üzerinden devamına, fazlaya ilişkin istemin reddine,'));
+  const h8 = KS.hesapla(KS.talepCoz('HARCA ESAS DEĞER : 4.567,71- TL'), hk8);
+  esit('Kısmen kabul, dilekçede yalnız toplam: kalemler yazılmaz, toplam notta', [h8.tamam, /reddedilen yaklaşık 2125.46 TL/.test(h8.notlar.join(' '))], [false, true]);
+
+  const hk9 = KS.hukumCoz(KS.hukumAyikla('HÜKÜM; Yukarıda açıklanan nedenlerle; 1-Davanın AÇILMAMIŞ SAYILAMASINA, Dair kesin olmak üzere'));
+  esit('Yazım hatalı "açılmamış sayılamasına"', [hk9.sonuc, hk9.kesin], ['AÇILMAMIŞ SAYILMASINA', true]);
+
   esit('Mahkeme adı eşleşmesi', KS.mahkemeDuz('İSTANBUL 5.TÜKETİCİ '), KS.mahkemeDuz('İstanbul 5. Tüketici Mahkemesi'));
   esit('Mahkeme türü kodu', [KS.birimTuru('İSTANBUL 4. ASLİYE TİCARET'), KS.birimTuru('İstanbul 5. Tüketici')], ['0902', '0912']);
   esit('Y/E hücresinde yeni esas', KS.esasNo('Y: 2023/252\nE: 2023/223').no, '2023/252');
