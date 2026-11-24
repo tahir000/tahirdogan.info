@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>Karar Sorgu</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233b3f73'/%3E%3Cpath d='M9 10h14M9 16h14M9 22h9' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root { --zemin: #f3f4f8; --kart: #ffffff; --cizgi: #dcdeea; --yazi: #1c2433; --soluk: #5a6078; --vurgu: #3b3f73; --vurgu-koyu: #2c2f57; --vurgu-acik: #ecedf7; --uyari: #8a5a00; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--zemin); color: var(--yazi); font: 15px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+.kap { max-width: 880px; margin: 0 auto; padding: 0 16px; }
+header { background: var(--vurgu); color: #fff; padding: 30px 0 28px; }
+header a.geri { display: inline-block; margin-bottom: 8px; color: #fff; opacity: .85; font-size: 13px; text-decoration: none; }
+header a.geri:hover, header a.geri:focus-visible { opacity: 1; text-decoration: underline; }
+h1 { margin: 0 0 8px; font-size: 26px; }
+header p { margin: 0; max-width: 680px; opacity: .92; }
+main { padding-top: 22px; padding-bottom: 30px; }
+section { background: var(--kart); border: 1px solid var(--cizgi); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+h2 { margin: 0 0 10px; font-size: 18px; }
+ol, ul { margin: 0; padding-left: 22px; }
+li { margin: 4px 0; }
+.yerimi { display: inline-block; margin: 6px 0 4px; padding: 9px 18px; border-radius: 8px; background: var(--vurgu); color: #fff; font-weight: 600; text-decoration: none; cursor: grab; }
+.yerimi:hover { background: var(--vurgu-koyu); }
+.not { color: var(--soluk); font-size: 13.5px; }
+.uyari { color: var(--uyari); }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; vertical-align: top; padding: 7px 8px; border-bottom: 1px solid var(--cizgi); }
+th { color: var(--soluk); font-weight: 600; }
+td:first-child { font-weight: 600; white-space: nowrap; }
+code { background: var(--vurgu-acik); padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+footer { padding-bottom: 30px; color: var(--soluk); font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+<div class="kap">
+<a class="geri" href="../">← Büro Araçları</a>
+<h1>Karar Sorgu</h1>
+<p>Karara çıkan itirazın iptali davalarını İmza Pro üzerinden UYAP'ta sorgular; gerekçeli kararı ve dava dilekçesini okuyup Excel'in reddedilen kalem, tutar ve kesinleşme sütunlarını doldurur. Yalnız sorgular.</p>
+</div>
+</header>
+<main class="kap">
+
+<section>
+<h2>Kurulum (bir kez)</h2>
+<p>Aşağıdaki düğmeyi fareyle tutup Chrome'un yer imleri çubuğuna sürükleyin. Tıklamayın; bu sayfada çalışmaz.</p>
+<a class="yerimi" href="javascript:(function(){if(window.KararSorgu){window.KararSorgu.panel();return;}var s=document.createElement('script');s.src='https://tahirdogan.info/buro/karar-sorgu/bot.js?v='+Date.now();document.body.appendChild(s);})();">Karar Sorgu</a>
+<p class="not">Yer imleri çubuğu görünmüyorsa Ctrl+Shift+B. Yer imi her tıklamada botun güncel sürümünü bu siteden yükler.</p>
+</section>
+
+<section>
+<h2>Kullanım</h2>
+<ol>
+<li>İmza Pro'ya (imza.co) her zamanki gibi girin; UYAP Avukat ana sayfası açılsın.</li>
+<li>Yer imleri çubuğundaki <strong>Karar Sorgu</strong>'ya tıklayın. Sol altta panel açılır.</li>
+<li>"Karara Çıkan Dosyalar Raporu" Excel'ini seçin. Bot ilk satırdaki başlıklardan sütunları bulur; N, O, R–Y sütunları dolu satırları atlar.</li>
+<li>Başlangıç satırını ve kaç dosya sorgulanacağını seçip <strong>Başlat</strong>'a basın. Her dosya yaklaşık 20–30 saniye sürer.</li>
+<li>Bitince <strong>Excel'i indir</strong>. İnen dosya sizin Excel'inizin aynısıdır; yalnız sorgulanan satırların N, O, R–Y hücreleri dolar, biçimler korunur.</li>
+</ol>
+</section>
+
+<section>
+<h2>Bot ne yapar</h2>
+<ol>
+<li>Mahkemeyi (I sütunu) ve esas numarasını (J) UYAP'ta arar: önce açık, bulamazsa kapalı dosyalarda. "Y: … E: …" yazan hücrelerde yeni (Y) mahkeme ve esas alınır.</li>
+<li>Evrak listesinden en son <strong>gerekçeli kararı</strong> açar ve hüküm kısmını okur. Gerekçeli karar yoksa son duruşma zaptındaki kısa karara bakar.</li>
+<li><strong>Dava dilekçesinden</strong> talep edilen asıl alacağı (geçiş ücreti + gecikme cezası), takip öncesi işlemiş faizi, KDV'yi ve icra inkâr talebini okur; toplamı K sütunundaki müddeabihle karşılaştırır.</li>
+<li>Ek karar, ıslah ve istinaf/temyiz evraklarına bakar; sonucu değiştirmiş olabileceklerse uyarır.</li>
+</ol>
+</section>
+
+<section>
+<h2>Excel'e yazılanlar</h2>
+<table>
+<tr><th>Sütun</th><th>Değer</th></tr>
+<tr><td>N</td><td>Reddedilen kalemler: GEÇİŞ ÜCRETİ, GECİKME CEZASI, FAİZ, KDV, İCRA İNKAR; yoksa YOK.</td></tr>
+<tr><td>O</td><td>Reddedilen faiz ve KDV: TAKİP ÖNCESİ FAİZ, TAKİP SONRASI FAİZ, KDV; yoksa YOK.</td></tr>
+<tr><td>R</td><td>S, T, U, V ve W tutarlarının toplamı.</td></tr>
+<tr><td>S, T</td><td>Reddedilen faiz ve KDV tutarı: talep edilen eksi hükümde kabul edilen.</td></tr>
+<tr><td>U, V</td><td>Reddedilen geçiş ücreti ve gecikme cezası. Dilekçede ayrı yazılmamışsa reddedilen asıl alacak 1/4 oranıyla ayrılır (ceza, ücretin dört katı; 6001 s.K. m.30/5).</td></tr>
+<tr><td>W</td><td>İcra inkâr tazminatı talebi reddedildiyse talep edilen asıl alacağın dilekçedeki oranı (genellikle %20).</td></tr>
+<tr><td>X</td><td>KESİNLEŞTİ: dosyada kesinleşme evrakı var ya da karar kesin olarak verilmiş. Değilse KESİNLEŞMEDİ.</td></tr>
+<tr><td>Y</td><td>Kesinleşmişse HİTAM; değilse İSTİNAF, TEMYİZ, KESİNLEŞME BEKLENİYOR ya da DERDEST.</td></tr>
+</table>
+<p class="not">Tutar yoksa hücreye YOK yazılır. Karar verilmesine yer olmadığına, açılmamış sayılmasına ve konusuz kalma kararlarında reddedilen kalem yoktur.</p>
+</section>
+
+<section>
+<h2>Elle bakılması gerekenler</h2>
+<ul>
+<li class="uyari">Hüküm ya da dilekçe okunamazsa, dosyada ıslah varsa ya da ek karar sonucu değiştirmiş olabilirse bot N–W hücrelerini boş bırakır, yalnız X ve Y'yi yazar; nedeni panelde turuncu not olarak görünür.</li>
+<li>Hükümde yalnız "takibin … TL asıl alacak üzerinden devamına" yazıyorsa işlemiş faiz ve KDV reddedilmiş sayılır; panelde bu not düşülür.</li>
+<li>Dosya istinaf ya da temyize gitmişse ilk derece kararı okunur; üst mahkeme sonucu değiştirdiyse elle düzeltin.</li>
+</ul>
+</section>
+
+<section>
+<h2>Güvenlik ve sınırlar</h2>
+<ul>
+<li>Bot yalnız sorgular: dosya arar, evrak listesini ve evrakları okur. Talep göndermez, ücret yatırmaz, giriş yapmaz, ücretli sorgu (araç, tapu, banka, safahat) yapmaz.</li>
+<li>İstekler arasında en az 4 saniye bekler. UYAP oturumu kapanırsa ya da güvenlik doğrulaması isterse durur.</li>
+<li>Excel ve sonuçlar tarayıcıdan dışarı gönderilmez. UYAP Sorgu Aracı ya da başka biri aynı hesapla sorgu yaparken çalıştırmayın.</li>
+</ul>
+</section>
+
+</main>
+<footer class="kap">
+<p>Sürüm 1.0.0 · Kasım 2026 · <a href="test/test.html">Testler</a></p>
+</footer>
+</body>
+</html>
