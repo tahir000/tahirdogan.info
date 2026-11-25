@@ -31,7 +31,7 @@
   'use strict';
 
   const KH = {};
-  const SURUM = '1.0.2';
+  const SURUM = '1.0.3';
 
   /* ---------- Metin ve tarih ---------- */
   function metin(v) { return v === null || v === undefined ? '' : String(v).replace(/\s+/g, ' ').trim(); }
@@ -689,6 +689,16 @@
     return s;
   };
 
+  /* Sorgulanacak kayıtlar: seçilen aralık; kayıtlı sonucu olanlar (istenirse) atlanır, listede iki kez geçen dosya bir kez sorgulanır */
+  KH.isListesi = function (kayitlar, bas, adet, atla, sonuclar) {
+    const gorulen = {};
+    return kayitlar.map(function (x, i) { return { x: x, sira: i + 1 }; }).slice(bas - 1, bas - 1 + adet).filter(function (y) {
+      if ((atla && sonuclar[y.x.anahtar]) || gorulen[y.x.anahtar]) return false;
+      gorulen[y.x.anahtar] = true;
+      return true;
+    });
+  };
+
   /* Panelde tek satırlık özet */
   KH.kisaOzet = function (s) {
     if (!s.ozet) return (s.durum || 'Hata') + (s.mesaj ? ': ' + s.mesaj : '');
@@ -789,7 +799,7 @@
     };
     $('.kh-basla').onclick = async function () {
       const bas = Math.max(1, +$('.kh-bas').value || 1), adet = Math.max(1, +$('.kh-adet').value || 10), atla = $('.kh-atla').checked;
-      const is = kayitlar.map(function (x, i) { return { x: x, sira: i + 1 }; }).slice(bas - 1, bas - 1 + adet).filter(function (y) { return !atla || !sonuclar[y.x.anahtar]; });
+      const is = KH.isListesi(kayitlar, bas, adet, atla, sonuclar);
       if (!is.length) { durum('Sorgulanacak dosya yok (seçilen aralıktaki dosyaların sonucu kayıtlı).', true); return; }
       durdur = false; calisiyor = true;
       $('.kh-basla').disabled = true; $('.kh-dur').disabled = false; $('.kh-liste').innerHTML = '';
