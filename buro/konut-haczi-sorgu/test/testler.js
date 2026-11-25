@@ -45,8 +45,29 @@
   esit('Talimattan sonra gelen yeni talep notta görünür', /yeni taşınır haciz talebi var \(01\.03\.2030\)/.test(KH.surec(zincir.concat([yeniTalep])).notlar.join(' ')), true);
   const yenilenen = KH.surec(zincir.concat([yeniTalep, { tur: 'İcra Dairesi Talimat Gönderme Yazısı', tarih: '05/03/2030' }]));
   esit('Talep üzerine talimat yeniden yazılmışsa not düşülmez', [yenilenen.adim, yenilenen.notlar], [7, []]);
-  const kararsiz = KH.surec([E.talep, E.talimat, E.gelen]);
-  esit('Karar olmadan yazılan talimat süreci ilerletmez, notta görünür', [kararsiz.adim, /değişik iş kararı olmadan/.test(kararsiz.notlar.join(' '))], [1, true]);
+  /* Doğrudan talimat: mahkeme aşaması olmadan talimat yazan daireler */
+  const tEk = 'Kararla İlişkili Tensip - Genel Haciz Talebi-Taşınır Haciz Talimatı Talebi, ', hEk = 'Kararla İlişkili Tensip - Genel Haciz Talebi-Taşınır Haciz Talebi, ';
+  const tensip = function (tarih, sonuc, ek) { return { tur: 'Tensip zaptı', aciklama: sonuc, tarih: tarih, ekTurleri: ek }; };
+  const talimatTalebi = { tur: 'Avukat Portal Haciz Talebi', aciklama: 'Taşınır Haciz Talimatı Talebi, ', tarih: '07/10/2030' };
+  const dogrudan = KH.surec([talimatTalebi, tensip('08/10/2030', 'Karar/Kabul', tEk), { tur: 'İcra Dairesi Talimat Gönderme Yazısı', tarih: '08/10/2030' },
+    { tur: 'Genel Talimat Cevabı Evrakı', tarih: '12/10/2030', gonderen: 'Başka İl İcra Dairesi', gonderenDosyaNo: '2030/1141' }], 'Örnek 1. İcra Dairesi');
+  esit('Karar alınmadan doğrudan yazılan talimat: 7. adım, notta belirtilir', [dogrudan.adim, dogrudan.evrak.karar, /doğrudan yazılmış/.test(dogrudan.notlar.join(' ')), KH.ozetle(dogrudan, {}).tarihler],
+    [7, null, true, ['07.10.2030', '', '', '', '', '08.10.2030', '12.10.2030']]);
+  esit('Tevzi formu mahkeme yazısı yoksa sürece sayılmaz (başka davanın formu olabilir)', KH.surec([E.talep, E.tevzi]).adim, 1);
+  esit('Karardan önceki eski talimat yeni süreci ilerletmez', KH.surec([{ tur: 'İcra Dairesi Talimat Gönderme Yazısı', tarih: '01/01/2030' }, E.talep, E.yazi, E.tevzi, E.karar]).adim, 4);
+
+  /* Tensip: talebin kabulü ya da reddi */
+  const bekle = KH.surec([E.talep]);
+  const kabul = KH.surec([E.talep, tensip('11/01/2030', 'Karar/Kabul', hEk)]);
+  const red = KH.surec([E.talep, tensip('11/01/2030', 'Karar/ Red', hEk)]);
+  esit('1. adım: tensip yok / kabul / red', [bekle.siradaki, /mahkemesine yazı yazması/.test(kabul.siradaki), red.adim, red.adimAdi, /reddetmiş \(11\.01\.2030/.test(red.siradaki)],
+    ['İcra dairesinin talebi tensip etmesi bekleniyor', true, 1, 'Haciz talebi reddedildi', true]);
+  esit('Başka talebin (maaş haczi) tensibi taşınır haciz talebine sayılmaz', KH.surec([E.talep, tensip('11/01/2030', 'Karar/Red', 'Kararla İlişkili Tensip - Genel Haciz Talebi-Maaş Haczi Talebi, ')]).siradaki, 'İcra dairesinin talebi tensip etmesi bekleniyor');
+  const red5 = KH.surec(zincir.slice(0, 7).concat([tensip('21/01/2030', 'Karar/Red', tEk)]));
+  esit('5. adım: karar sonrası talep reddedilmişse', [red5.adim, red5.adimAdi, KH.ozetle(red5, {}).adimAdi], [5, 'Karar sonrası talep reddedildi', 'Karar sonrası talep reddedildi']);
+  /* Önce talimat talebi reddedilmiş, sonra haciz talebi atılıp mahkemeye yazılmış */
+  const yeniden = KH.surec([talimatTalebi, tensip('07/10/2030', 'Karar/Red', tEk), { tur: 'Avukat Portal Haciz Talebi', aciklama: 'Taşınır Haciz Talebi, ', tarih: '23/11/2030' }, tensip('24/11/2030', 'Karar/Kabul', hEk), { tur: 'İcra Mahkemesine Gönderilen Yazılar', tarih: '24/11/2030' }]);
+  esit('Reddedilen talepten sonra yeni taleple mahkemeye yazılmışsa 2. adım', [yeniden.adim, yeniden.adimAdi, KH.ozetle(yeniden, {}).tarihler[0]], [2, undefined, '23.11.2030']);
 
   /* ---------- Değişik iş kararı ---------- */
   const kararA = 'T.C. Örnek 3. İCRA HUKUK MAHKEMESİ Esas-Karar No: 2030/77 D.İş - 2030/91\n\n\tT.C.\n\tÖrnek\n\t3. İCRA HUKUK MAHKEMESİ\n\nDEĞİŞİK İŞ KARAR\n\n'
@@ -93,7 +114,7 @@
   const k0 = { daire: 'Örnek 1. İcra Dairesi', no: '2030/1234' };
   const st = KH.satir(k0, { ozet: oz, dosyaDurum: 'Açık' });
   esit('Excel satırı: sütun sayısı başlıklarla aynı', [st.length, KH.satir(k0, null).length, KH.satir(k0, { durum: 'Dosya bulunamadı', mesaj: 'x', notlar: [] }).length], [KH.BASLIKLAR.length, KH.BASLIKLAR.length, KH.BASLIKLAR.length]);
-  esit('Excel satırı: aşama, D.İş, talimat', [st[2], st[4], st[5], st[6], st[7], st[8], st[9], st[10]],
+  esit('Excel satırı: aşama, D.İş, talimat', [st[3], st[5], st[6], st[7], st[8], st[9], st[10], st[11]],
     ['7 - Talimat dosyası açıldı', 'Örnek 3. İcra Hukuk Mahkemesi', '2030/77 D.İş', '2030/91', '14.01.2030', 'ONAYLANDI', 'Başka İl İcra Dairesi', '2030/321']);
   const oz3 = KH.ozetle(KH.surec(zincir.slice(0, 5)), { tevzi: tv });
   esit('3. adım: değişik iş dosyası tevzi formundan, karar bekleniyor', [oz3.adim, oz3.disler[0].mahkeme, oz3.disler[0].esasNo, oz3.disler[0].sonuc], [3, 'Örnek 3. İcra Hukuk Mahkemesi', '2030/77', 'KARAR BEKLENİYOR']);
@@ -118,7 +139,8 @@
 
   const blob = await KH.excelYaz([st, KH.satir(k0, null)]);
   const geri = await KH.excelHucreler(new Uint8Array(await blob.arrayBuffer()));
-  esit('Excel: yazılan dosya yeniden okunabiliyor', [geri[1].A, geri[1].T, geri[2].B, geri[2].C, geri[2].K, geri[3].T], ['İcra Dairesi', 'Not', '2030/1234', '7 - Talimat dosyası açıldı', '2030/321', 'Sorgulanmadı']);
+  esit('Excel: yazılan dosya yeniden okunabiliyor', [geri[1].A, geri[1].U, geri[2].B, geri[2].D, geri[2].L, geri[3].U], ['İcra Dairesi', 'Not', '2030/1234', '7 - Talimat dosyası açıldı', '2030/321', 'Sorgulanmadı']);
+  esit('Excel: listedeki öteki hücreler "Listedeki Bilgi" sütununa taşınır', [kb1.kayitlar[0].bilgi, KH.satir(kb1.kayitlar[0], null)[2], KH.kayitlar(baslikli, '').kayitlar[0].bilgi, KH.BASLIKLAR[2]], ['Taşınır Haciz Talebi', 'Taşınır Haciz Talebi', '1 | X', 'Listedeki Bilgi']);
 
   /* ---------- UYAP taklidiyle uçtan uca ---------- */
   async function udf(icerik, veri) {
@@ -149,7 +171,9 @@
     };
     return { bag: KH.baglanti({ fetch: getir, onek: '/', aralik: 0, uyu: async function () {}, yenidenDeneme: [1, 1] }), gunluk: gunluk };
   }
-  const uyapEvrak = function (e, id) { return { evrakId: id, tur: e.tur, aciklama: e.aciklama, sistemeGonderildigiTarih: e.tarih, onaylandigiTarih: e.tarih, gonderenYerKisi: e.gonderen, gonderenDosyaNo: e.gonderenDosyaNo }; };
+  const uyapEvrak = function (e, id) { return { evrakId: id, tur: e.tur, aciklama: e.aciklama, sistemeGonderildigiTarih: e.tarih, onaylandigiTarih: e.tarih, gonderenYerKisi: e.gonderen, gonderenDosyaNo: e.gonderenDosyaNo, ekEvrakListesi: e.ekTurleri ? [{ evrakId: 'ek', sira: 1, ekTuru: e.ekTurleri }] : [] }; };
+  const s0 = await KH.dosyaSorgula(taklit([uyapEvrak(E.talep, 'a'), uyapEvrak(tensip('11/01/2030', 'Karar/Red', hEk), 'r')]).bag, { daire: 'Örnek 1. İcra Dairesi', no: '2030/1234' });
+  esit('Uçtan uca: tensip zaptının eki evrak listesinden okunur (talep reddedilmiş)', [s0.ozet.adim, s0.ozet.adimAdi], [1, 'Haciz talebi reddedildi']);
   const tumListe = [uyapEvrak(E.talep, 'a'), uyapEvrak(E.maas, 'b'), uyapEvrak(E.yazi, 'c'), uyapEvrak(E.tevzi, 't1'), uyapEvrak(E.karar, 'k1'), uyapEvrak(E.talep2, 'd'), uyapEvrak(E.talimat, 'g1'), uyapEvrak(E.gelen, 'e')];
 
   const t1 = taklit(tumListe);
@@ -167,7 +191,7 @@
 
   const t4 = taklit(tumListe, { kapali: true });
   const s4 = await KH.dosyaSorgula(t4.bag, k0);
-  esit('Açıkta bulunmayan dosya kapalılarda aranır', [s4.dosyaDurum, s4.ozet.adim, /Dosya durumu: Kapalı/.test(KH.satir(k0, s4)[19])], ['Kapalı', 7, true]);
+  esit('Açıkta bulunmayan dosya kapalılarda aranır', [s4.dosyaDurum, s4.ozet.adim, /Dosya durumu: Kapalı/.test(KH.satir(k0, s4)[20])], ['Kapalı', 7, true]);
 
   const s5 = await KH.dosyaSorgula(taklit(tumListe).bag, { daire: 'Örnek 1. İcra Dairesi', no: '2030/4321' });
   esit('UYAP\'ta olmayan dosya', [s5.ozet, s5.durum], [null, 'Dosya bulunamadı']);
