@@ -96,6 +96,18 @@ footer { padding-bottom: 30px; color: var(--soluk); font-size: 13px; }
 </section>
 
 <section>
+<h2>Talimatı isimle arama (ikinci geçiş)</h2>
+<p>Talimat dairesi dosyayı açmış ama ana dosyaya henüz evrak göndermemişse talimat numarası evrak listesinde görünmez. Liste sorgulandıktan sonra <strong>Talimatı isimle ara</strong> düğmesi, değişik iş kararı olan dosyalarda şunu yapar:</p>
+<ol>
+<li>Ana dosyanın taraf bilgisinden borçlunun adını ve soyadını alır (borçlu kurumsa atlar).</li>
+<li>UYAP'ın Dosya Sorgulama ekranındaki <strong>Kişi ile Ara</strong> sorgusunu bütün icra dairelerinde çalıştırır; türü "Talimat Dosyası" olan sonuçlar adaydır.</li>
+<li>Aynı borçlunun başka dosyaları ve adaşları da çıkabildiği için her adayın evrak listesine bakar: içinde bu ana dosyanın dairesinden ve numarasından gelen talimat yazısı varsa talimat dosyası bu dosyaya aittir.</li>
+<li>Doğrulanan talimat dairesi ve dosya numarası Excel'in talimat sütunlarına eklenir. Dosya 6. aşamadaysa aşama 7 olarak yazılır.</li>
+</ol>
+<p class="not">Sıra: önce talimatı yazılmış dosyalar (6 ve 7. aşama), sonra 5 ve 4. aşamadakiler. Dosya başına üç ila beş istek gider. Borçlunun adı tarayıcıda saklanmaz ve Excel'e yazılmaz.</p>
+</section>
+
+<section>
 <h2>Excel'e yazılanlar</h2>
 <div class="tablo">
 <table>
@@ -108,6 +120,7 @@ footer { padding-bottom: 30px; color: var(--soluk); font-size: 13px; }
 <tr><td>Talimat Dairesi, Talimat Dosya No</td><td>Talimatı kaydeden icra dairesi ve verdiği talimat dosya numarası.</td></tr>
 <tr><td>Talimat Yazılan Yer</td><td>Talimat dosyası henüz açılmamışsa talimat yazısının muhatabı.</td></tr>
 <tr><td>1 – 7 tarihleri</td><td>Sürecin her adımındaki evrakın tarihi.</td></tr>
+<tr><td>İsimle Arama</td><td>İkinci geçişin sonucu: yeni talimat dosyası bulundu, evrak listesindeki doğrulandı, talimat dosyası çıkmadı ya da çıkanlar başka dosyaya ait. Aranmamış dosyada boştur.</td></tr>
 <tr><td>Not</td><td>Elle bakılması gereken durumlar ve kapalı dosya uyarısı.</td></tr>
 </table>
 </div>
@@ -127,7 +140,7 @@ footer { padding-bottom: 30px; color: var(--soluk); font-size: 13px; }
 <section>
 <h2>Güvenlik ve sınırlar</h2>
 <ul>
-<li>Bot yalnız sorgular: dosya arar, evrak listesini ve yukarıdaki üç evrakı okur. Talep göndermez, ücret yatırmaz, giriş yapmaz, ücretli sorgu yapmaz.</li>
+<li>Bot yalnız sorgular: dosya arar, evrak listesini ve yukarıdaki üç evrakı okur; ikinci geçişte taraf bilgisine bakıp kişi adıyla arama yapar. Talep göndermez, ücret yatırmaz, giriş yapmaz, ücretli sorgu yapmaz.</li>
 <li>İstekler arasında en az 4 saniye bekler (panelden değiştirilebilir, en az 2). UYAP yanıt vermezse artan aralarla üç kez yeniden dener, düzelmezse durur; yanıtsız kalan dosya "bulunamadı" sayılmaz.</li>
 <li>UYAP oturumu kapanırsa ya da güvenlik doğrulaması isterse durur.</li>
 <li>Excel ve sonuçlar tarayıcıdan dışarı gönderilmez; sonuçlar yalnız bu tarayıcıda, İmza Pro sayfasının deposunda saklanır. UYAP Sorgu Aracı ya da başka biri aynı hesapla sorgu yaparken çalıştırmayın.</li>
@@ -136,7 +149,7 @@ footer { padding-bottom: 30px; color: var(--soluk); font-size: 13px; }
 
 </main>
 <footer class="kap">
-<p>Sürüm 1.0.3 · Kasım 2026 · <a href="test/test.html">Testler</a></p>
+<p>Sürüm 1.1.0 · Kasım 2026 · <a href="test/test.html">Testler</a></p>
 </footer>
 </body>
 </html>
