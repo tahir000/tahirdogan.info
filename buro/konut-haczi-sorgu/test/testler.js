@@ -144,6 +144,14 @@
   const dairesiz = KH.kayitlar({ 1: { A: '2030/1' }, 2: { A: '2030/2' } }, 'Örnek 5. İcra Dairesi');
   esit('Excel: daire sütunu yoksa panele yazılan daire kullanılır', [dairesiz.sutunlar.daire, dairesiz.kayitlar[1].daire], [null, 'Örnek 5. İcra Dairesi']);
 
+  /* Listede iki kez geçen dosya (ör. önce haciz, sonra talimat talebi satırı) bir çalıştırmada bir kez sorgulanır */
+  const ciftli = KH.kayitlar({ 1: { A: 'Örnek 1. İcra Dairesi', B: '2030/1' }, 2: { A: 'Örnek 1. İcra Dairesi', B: '2030/2' }, 3: { A: 'Örnek 1. İcra Dairesi', B: '2030/1' }, 4: { A: 'Örnek 2. İcra Dairesi', B: '2030/1' } }, '').kayitlar;
+  const siralar = function (l) { return l.map(function (y) { return y.sira; }); };
+  const kayitli = {}; kayitli[ciftli[1].anahtar] = { ozet: null };
+  esit('İş listesi: yinelenen dosya bir kez, kayıtlı sonuç istenirse atlanır, aralık uygulanır',
+    [siralar(KH.isListesi(ciftli, 1, 10, true, {})), siralar(KH.isListesi(ciftli, 1, 10, true, kayitli)), siralar(KH.isListesi(ciftli, 1, 10, false, kayitli)), siralar(KH.isListesi(ciftli, 3, 2, true, {}))],
+    [[1, 2, 4], [1, 4], [1, 2, 4], [3, 4]]);
+
   const blob = await KH.excelYaz([st, KH.satir(k0, null)]);
   const geri = await KH.excelHucreler(new Uint8Array(await blob.arrayBuffer()));
   esit('Excel: yazılan dosya yeniden okunabiliyor', [geri[1].A, geri[1].U, geri[2].B, geri[2].D, geri[2].L, geri[3].U], ['İcra Dairesi', 'Not', '2030/1234', '7 - Talimat dosyası açıldı', '2030/321', 'Sorgulanmadı']);
