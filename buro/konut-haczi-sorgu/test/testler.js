@@ -154,7 +154,7 @@
 
   const blob = await KH.excelYaz([st, KH.satir(k0, null)]);
   const geri = await KH.excelHucreler(new Uint8Array(await blob.arrayBuffer()));
-  esit('Excel: yazılan dosya yeniden okunabiliyor', [geri[1].A, geri[1].U, geri[2].B, geri[2].D, geri[2].L, geri[3].U], ['İcra Dairesi', 'Not', '2030/1234', '7 - Talimat dosyası açıldı', '2030/321', 'Sorgulanmadı']);
+  esit('Excel: yazılan dosya yeniden okunabiliyor', [geri[1].A, geri[1].U, geri[1].V, geri[2].B, geri[2].D, geri[2].L, geri[3].V], ['İcra Dairesi', 'İsimle Arama', 'Not', '2030/1234', '7 - Talimat dosyası açıldı', '2030/321', 'Sorgulanmadı']);
   esit('Excel: listedeki öteki hücreler "Listedeki Bilgi" sütununa taşınır', [kb1.kayitlar[0].bilgi, KH.satir(kb1.kayitlar[0], null)[2], KH.kayitlar(baslikli, '').kayitlar[0].bilgi, KH.BASLIKLAR[2]], ['Taşınır Haciz Talebi', 'Taşınır Haciz Talebi', '1 | X', 'Listedeki Bilgi']);
 
   /* ---------- UYAP taklidiyle uçtan uca ---------- */
@@ -173,6 +173,9 @@
       if (bozuk > 0) { bozuk--; return yanit('[Fiddler] ReadResponse() failed', 504); }
       const g = s.body ? JSON.parse(s.body) : {};
       if (/avukat_mahkemeleri_sorgula/.test(url)) return yanit([{ birimAdi: 'Örnek 1. İcra Dairesi', birimId: 11 }, { birimAdi: 'Örnek 2. İcra Dairesi', birimId: 12 }]);
+      if (/dosya_taraf_bilgileri_brd/.test(url)) return yanit(ayar.taraflar || [{ adi: 'ÖRNEK BORÇLU', rol: 'Borçlu', kisiKurum: 'Kişi' }, { adi: 'ÖRNEK BANKA A.Ş.', rol: 'Alacaklı', kisiKurum: 'Kurum' }]);
+      if (/search_phrase_taraf_detayli/.test(url)) { gunluk.push('isim:' + g.adi + '|' + g.soyadi + '|' + g.dosyaDurumKod); return yanit([ayar.isim ? ayar.isim(g) : [], 0]); }
+      if (/list_dosya_evraklar/.test(url) && ayar.talimatEvrak && ayar.talimatEvrak[g.dosyaId]) return yanit({ tumEvraklar: ayar.talimatEvrak[g.dosyaId], pageTotal: 1 });
       if (/search_phrase_detayli/.test(url)) {
         if (ayar.aramaBozuk) return yanit({ beklenmeyen: true });
         const acik = g.dosyaDurumKod === 0;
@@ -213,7 +216,7 @@
 
   const t4 = taklit(tumListe, { kapali: true });
   const s4 = await KH.dosyaSorgula(t4.bag, k0);
-  esit('Açıkta bulunmayan dosya kapalılarda aranır', [s4.dosyaDurum, s4.ozet.adim, /Dosya durumu: Kapalı/.test(KH.satir(k0, s4)[20])], ['Kapalı', 7, true]);
+  esit('Açıkta bulunmayan dosya kapalılarda aranır', [s4.dosyaDurum, s4.ozet.adim, /Dosya durumu: Kapalı/.test(KH.satir(k0, s4)[21])], ['Kapalı', 7, true]);
 
   const s5 = await KH.dosyaSorgula(taklit(tumListe).bag, { daire: 'Örnek 1. İcra Dairesi', no: '2030/4321' });
   esit('UYAP\'ta olmayan dosya', [s5.ozet, s5.durum], [null, 'Dosya bulunamadı']);
@@ -230,6 +233,55 @@
   let kod9 = '';
   try { await KH.dosyaSorgula(taklit(tumListe).bag, { daire: 'Örnek 9. İcra Dairesi', no: '2030/1234' }); } catch (h) { kod9 = h.kod; }
   esit('Listede olmayan icra dairesi atlanır', kod9, 'ATLA');
+
+  /* ---------- Talimat dosyasını borçlu adıyla arama ---------- */
+  esit('Ad ve soyad ayrımı: önce son sözcük, sonra son iki sözcük', [KH.adSoyadAyir('ÖRNEK BORÇLU'), KH.adSoyadAyir('AD İKİNCİ SOYAD'), KH.adSoyadAyir('TEK')],
+    [[{ adi: 'ÖRNEK', soyadi: 'BORÇLU' }], [{ adi: 'AD İKİNCİ', soyadi: 'SOYAD' }, { adi: 'AD', soyadi: 'İKİNCİ SOYAD' }], []]);
+  const sKarar = function (adim, talimatlar) { return { ozet: { adim: adim, adimAdi: KH.ADIMLAR[adim], siradaki: '', disler: [{ mahkeme: 'Örnek 3. İcra Hukuk Mahkemesi', esasNo: '2030/77', kararNo: '2030/91', kararTarihi: '14.01.2030', sonuc: 'ONAYLANDI', evrakTarihi: '14.01.2030' }], talimatlar: talimatlar || [], talimatYeri: '', tarihler: ['', '', '', '', '', '', ''], notlar: [] } }; };
+  const sTevzi = { ozet: { adim: 3, disler: [{ mahkeme: 'x', esasNo: '2030/1', kararNo: '', kararTarihi: '', sonuc: 'KARAR BEKLENİYOR', evrakTarihi: '' }], talimatlar: [] } };
+  esit('Kararı olan dosya: gerçek karar sayılır, tevzi formundan bilinen ve kararsız dosya sayılmaz', [KH.kararVar(sKarar(4)), KH.kararVar(sTevzi), KH.kararVar({ ozet: { adim: 1, disler: [] } }), KH.kararVar(null)], [true, false, false, false]);
+  const kay5 = [1, 2, 3, 4, 5, 6].map(function (n) { return { daire: 'Örnek 1. İcra Dairesi', no: '2030/' + n, anahtar: 'D|2030/' + n }; }).concat([{ daire: 'Örnek 1. İcra Dairesi', no: '2030/2', anahtar: 'D|2030/2' }]);
+  const son5 = { 'D|2030/1': sKarar(4), 'D|2030/2': sKarar(7), 'D|2030/3': sTevzi, 'D|2030/4': sKarar(6), 'D|2030/5': Object.assign(sKarar(6), { isim: { durum: 'x', talimatlar: [], notlar: [] } }), 'D|2030/6': sKarar(5) };
+  esit('İsimle arama sırası: önce 6. ve 7. adım, sonra 5 ve 4; kararsız, aranmış ve yinelenen satırlar atlanır',
+    [KH.isimListesi(kay5, son5, true).map(function (y) { return y.sira; }), KH.isimListesi(kay5, son5, false).map(function (y) { return y.sira; })], [[4, 2, 6, 1], [4, 5, 2, 6, 1]]);
+
+  const ana = { dosyaId: 'D1', dosyaNo: '2030/1234', dosyaTur: 'İcra Dosyası', dosyaTurKod: 35, dosyaDurum: 'Açık', birimAdi: 'Örnek 1. İcra Dairesi', birimId: '11' };
+  const tal1 = { dosyaId: 'T1', dosyaNo: '2030/321', dosyaTur: 'Talimat Dosyası', dosyaTurKod: 1, dosyaDurum: 'Açık', birimAdi: 'Başka İl İcra Dairesi', birimId: '77', dosyaAcilisTarihi: { date: { year: 2030, month: 1, day: 27 }, time: { hour: 10, minute: 0 } } };
+  const tal2 = { dosyaId: 'T2', dosyaNo: '2030/999', dosyaTur: 'Talimat Dosyası', dosyaTurKod: 1, dosyaDurum: 'Açık', birimAdi: 'Üçüncü İl İcra Dairesi', birimId: '78', dosyaAcilisTarihi: { date: { year: 2030, month: 2, day: 3 } } };
+  const yazi = function (daire, no) { return [{ evrakId: 'y', tur: 'İcra Dairesi Talimat Gönderme Yazısı', sistemeGonderildigiTarih: '25/01/2030', gonderenYerKisi: daire, gonderenDosyaNo: no }]; };
+  const talimatEvrak = { T1: { '2030/321(Talimat Dosyası)': yazi('Örnek 1. İcra Dairesi', '2030/1234') }, T2: { '2030/999(Talimat Dosyası)': yazi('Örnek 1. İcra Dairesi', '2030/5555') } };
+  const acikta = function (l) { return function (g) { return g.dosyaDurumKod === 0 ? l : []; }; };
+
+  const tA = taklit(tumListe, { isim: acikta([tal2, tal1, ana]), talimatEvrak: talimatEvrak });
+  const imA = await KH.talimatAra(tA.bag, k0, sKarar(6));
+  esit('İsimle arama: bu dosyaya ait talimat dosyası talimat yazısıyla doğrulanır, başka dosyanınki alınmaz',
+    [imA.durum, imA.talimatlar, imA.aday, imA.notlar], ['Yeni talimat dosyası bulundu', [{ daire: 'Başka İl İcra Dairesi', dosyaNo: '2030/321', acilis: '27.01.2030', dosyaDurum: 'Açık', yeni: true }], 2, ['aynı isimle başka dosyalara ait 1 talimat dosyası daha var']]);
+  esit('İsimle arama: ad ve soyad ayrı gönderilir, yalnız açık dosyalarda bir kez aranır', tA.gunluk.filter(function (u) { return /^isim:/.test(u); }), ['isim:ÖRNEK|BORÇLU|0']);
+  const satA = KH.satir(k0, Object.assign(sKarar(6), { isim: imA }));
+  esit('Excel: 6. adımdaki dosyada isimle bulunan talimat aşamayı 7 yapar, daire ve numara yazılır', [satA[3], satA[10], satA[11], satA[19], satA[20]],
+    ['7 - Talimat dosyası açıldı', 'Başka İl İcra Dairesi', '2030/321', '27.01.2030', 'Yeni talimat dosyası bulundu (aynı isimle başka dosyalara ait 1 talimat dosyası daha var)']);
+
+  const tB = taklit(tumListe, { isim: acikta([tal1, ana]), talimatEvrak: talimatEvrak });
+  const sB7 = sKarar(7, [{ daire: 'Başka İl İcra Dairesi', dosyaNo: '2030/321', tarih: '28.01.2030' }]);
+  const imB = await KH.talimatAra(tB.bag, k0, sB7);
+  esit('İsimle arama: evrak listesinden bilinen talimat yeniden okunmadan doğrulanır', [imB.durum, imB.talimatlar[0].yeni, tB.gunluk.filter(function (u) { return /list_dosya_evraklar/.test(u); }).length, KH.talimatBirlesik(Object.assign(sB7, { isim: imB })).length],
+    ['Evrak listesindeki talimat dosyası doğrulandı', false, 0, 1]);
+
+  const imC = await KH.talimatAra(taklit(tumListe, { taraflar: [{ adi: 'ÖRNEK ŞİRKET LTD. ŞTİ.', rol: 'Borçlu', kisiKurum: 'Kurum' }] }).bag, k0, sKarar(6));
+  esit('İsimle arama: borçlu kurumsa aranmaz', [imC.durum, imC.borclu], ['Borçlu kişi değil; kişi adıyla aranamadı', 0]);
+
+  const tD = taklit(tumListe, { taraflar: [{ adi: 'AD İKİNCİ SOYAD', rol: 'Borçlu', kisiKurum: 'Kişi' }], isim: function (g) { return g.dosyaDurumKod === 0 && g.soyadi === 'İKİNCİ SOYAD' ? [ana, tal1] : []; }, talimatEvrak: talimatEvrak });
+  const imD = await KH.talimatAra(tD.bag, k0, sKarar(6));
+  esit('İsimle arama: son sözcük soyadı tutmazsa son iki sözcük denenir', [imD.talimatlar.length, imD.notlar, tD.gunluk.filter(function (u) { return /^isim:/.test(u); })], [1, [], ['isim:AD İKİNCİ|SOYAD|0', 'isim:AD|İKİNCİ SOYAD|0']]);
+
+  const tE = taklit(tumListe, { isim: acikta([ana]) });
+  const imE = await KH.talimatAra(tE.bag, k0, sKarar(6));
+  const tE4 = taklit(tumListe, { isim: acikta([ana]) });
+  const imE4 = await KH.talimatAra(tE4.bag, k0, sKarar(4));
+  esit('İsimle arama: talimat yazılmış ama açıkta yoksa kapalı dosyalara da bakılır; 4. adımda bakılmaz',
+    [imE.durum, tE.gunluk.filter(function (u) { return /^isim:/.test(u); }), imE4.durum, tE4.gunluk.filter(function (u) { return /^isim:/.test(u); }).length], ['Talimat dosyası çıkmadı', ['isim:ÖRNEK|BORÇLU|0', 'isim:ÖRNEK|BORÇLU|1'], 'Talimat dosyası çıkmadı', 1]);
+  const imF = await KH.talimatAra(taklit(tumListe, { isim: acikta([ana, tal2]), talimatEvrak: talimatEvrak }).bag, k0, sKarar(4));
+  esit('İsimle arama: çıkan talimat dosyası başka dosyaya aitse eklenmez', [imF.durum, imF.talimatlar, KH.satir(k0, Object.assign(sKarar(4), { isim: imF }))[3]], ['İsimle 1 talimat dosyası çıktı; bu dosyaya ait olan yok', [], '4 - Değişik iş kararı geldi']);
 
   const ol = document.getElementById('sonuc');
   let hata = 0;
