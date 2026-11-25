@@ -31,7 +31,7 @@
   'use strict';
 
   const KH = {};
-  const SURUM = '1.0.1';
+  const SURUM = '1.0.2';
 
   /* ---------- Metin ve tarih ---------- */
   function metin(v) { return v === null || v === undefined ? '' : String(v).replace(/\s+/g, ' ').trim(); }
@@ -119,7 +119,7 @@
    * en son "İcra Mahkemesine Gönderilen Yazılar" evrakıyla başlayan tura göre belirlenir; önceki
    * turların değişik iş kararları ve talimat dosyaları da listelenir.
    */
-  KH.surec = function (evraklar, bizimDaire) {
+  KH.surec = function (evraklar, bizimDaire, ayar) {
     const s = (evraklar || []).map(function (e) { return Object.assign({}, e, { sinif: KH.evrakSinifi(e, bizimDaire), gun: gunSayi(e.tarih) }); })
       .filter(function (e) { return e.sinif; })
       .sort(function (a, b) { return a.gun - b.gun; });
@@ -127,11 +127,20 @@
     const son = function (l) { return l.length ? l[l.length - 1] : null; };
     const ilkSonra = function (l, gun) { return l.find(function (e) { return e.gun >= gun; }) || null; };
     const r = { adim: 0, evrak: {}, kararlar: al('karar'), tevziler: al('tevzi'), talimatDosyalari: al('talimatDosyasi'), talimatYazilari: al('talimatYazisi'), talepler: al('talep'), notlar: [] };
-    const M = son(al('mahkemeYazisi'));
-    const bas = M ? M.gun : 0;
+    const sonYazi0 = son(al('mahkemeYazisi'));
+    /*
+     * ayar.yeniTur: dosyadaki bütün kararlardan sonra gelmiş, konut haczine ait olduğu içeriğinden doğrulanmış bir
+     * tevzi formunun günü. Bazı dosyalarda yeni tur, listede mahkeme yazısı görünmeden doğrudan tevzi formuyla başlar.
+     */
+    const yeniTur = ayar && ayar.yeniTur ? ayar.yeniTur : 0;
+    const M = yeniTur ? null : sonYazi0;
+    const bas = yeniTur || (M ? M.gun : 0);
     /* Tevzi formu yalnız mahkeme yazısından sonra geldiyse bu sürece aittir (dosyada başka davaların tevzi formu da olabilir) */
-    const V = M ? ilkSonra(r.tevziler, bas) : null;
-    const K = M ? ilkSonra(r.kararlar, bas) : son(r.kararlar);
+    const V = bas ? ilkSonra(r.tevziler, bas) : null;
+    const K = bas ? ilkSonra(r.kararlar, bas) : son(r.kararlar);
+    /* Son karardan ve son mahkeme yazısından sonra gelen tevzi formu: yeni bir turun başlangıcı olabilir, içeriği okunarak doğrulanır */
+    const sonKarar = son(r.kararlar), sonTevzi = son(r.tevziler);
+    r.sonrakiTevzi = !yeniTur && sonKarar && sonTevzi && sonTevzi.gun > sonKarar.gun && sonTevzi.gun > (sonYazi0 ? sonYazi0.gun : 0) ? sonTevzi : null;
     /*
      * Talimat yazısı ve talimat dosyası, sürecin mahkeme aşamasından (karar, o yoksa mahkeme yazısı) sonra geldiyse
      * bu sürece aittir. Mahkeme aşaması hiç yoksa talimat doğrudan yazılmıştır (bazı daireler konut tespitini
@@ -142,7 +151,7 @@
     const C = ilkSonra(r.talimatDosyalari, G ? G.gun : esik);
     /* Turu başlatan talep: mahkeme yazısından (yoksa talimat yazısından) önceki son taşınır haciz talebi; ikisi de yoksa son talep */
     const once = function (gun) { return son(r.talepler.filter(function (e) { return e.gun <= gun; })); };
-    const T1 = (M ? once(M.gun) : G ? once(G.gun) : son(r.talepler)) || r.talepler[0] || null;
+    const T1 = (bas ? once(bas) : G ? once(G.gun) : son(r.talepler)) || r.talepler[0] || null;
     const T2 = K ? r.talepler.find(function (e) { return e.gun >= K.gun && e !== T1; }) || null : null;
     r.evrak = { talep: T1, mahkemeYazisi: M, tevzi: V, karar: K, kararSonrasiTalep: T2, talimatYazisi: G, talimatDosyasi: C };
     r.adim = C ? 7 : G ? 6 : T2 ? 5 : K ? 4 : V ? 3 : M ? 2 : r.talepler.length ? 1 : 0;
@@ -164,7 +173,7 @@
     }
     if (!K && r.kararlar.length) r.notlar.push('Dosyadaki değişik iş kararı önceki bir konut haczi sürecine ait; yeni süreç ' + r.adim + '. adımda');
     if (r.kararlar.length > 1) r.notlar.push('Dosyada ' + r.kararlar.length + ' değişik iş kararı var');
-    if (!K && (G || C)) r.notlar.push(M ? 'Talimat, son mahkeme yazısının kararı dosyaya gelmeden yazılmış' : 'Talimat, değişik iş kararı alınmadan doğrudan yazılmış');
+    if (!K && (G || C)) r.notlar.push(bas ? 'Talimat, son mahkeme yazısının kararı dosyaya gelmeden yazılmış' : 'Talimat, değişik iş kararı alınmadan doğrudan yazılmış');
     /* Son talimat yazısından da sonra atılmış, karşılığı henüz görünmeyen talep (talimatın yenilenmesi ya da yeni adres) */
     const sonTalep = son(r.talepler), sonYazi = son(r.talimatYazilari);
     if (r.adim >= 6 && sonTalep && sonYazi && sonTalep.gun > sonYazi.gun) r.notlar.push('Son talimat yazısından sonra yeni taşınır haciz talebi var (' + tarihDuz(sonTalep.tarih) + '); yeni bir konut haczi talebiyse o süreç 1. adımdadır');
@@ -642,12 +651,23 @@
     const d = await bag.dosyaBul(k.daire, k.no);
     if (!d) { s.durum = 'Dosya bulunamadı'; s.mesaj = 'Dosya UYAP\'ta bu hesapla görünmüyor (açık ve kapalı dosyalarda arandı)'; return s; }
     s.dosyaDurum = d.dosyaDurum; s.daire = d.birimAdi;
-    const sr = KH.surec(await bag.evraklar(d), d.birimAdi);
+    const evrakListesi = await bag.evraklar(d);
+    let sr = KH.surec(evrakListesi, d.birimAdi);
     const oku = async function (e) {
       try { return await bag.belgeXml(d, e); }
       catch (hata) { if (hata && DURDURAN.indexOf(hata.kod) !== -1) throw hata; return null; }
     };
     const okunan = { kararlar: [], tevzi: null, talimatYeri: '', anaNo: d.dosyaNo };
+    /* Son karardan sonra gelmiş tevzi formu konut haczine aitse yeni bir tur başlamıştır: aşama o tura göre yeniden hesaplanır */
+    if (sr.sonrakiTevzi) {
+      const xml = await oku(sr.sonrakiTevzi);
+      const tv = xml ? KH.tevziCoz(xml) : null;
+      if (tv && tv.konutMu) {
+        sr = KH.surec(evrakListesi, d.birimAdi, { yeniTur: sr.sonrakiTevzi.gun });
+        okunan.tevzi = tv;
+        s.notlar.push('Son karardan sonra yeni bir konut haczi dosyası tevzi edilmiş (' + tarihDuz(sr.evrak.tevzi && sr.evrak.tevzi.tarih) + ')');
+      } else if (!tv) s.notlar.push('Son karardan sonra gelen tevzi formu okunamadı; elle bakın');
+    }
     /* Kararlar yeniden eskiye; üçten fazlası yalnız evrak listesindeki bilgiyle yazılır */
     const kararlar = sr.kararlar.slice().reverse();
     for (let i = 0; i < kararlar.length; i++) {
@@ -655,7 +675,7 @@
       okunan.kararlar.push({ evrak: kararlar[i], coz: xml ? KH.kararCoz(KH.udfIcerik(xml)) : null, okunamadi: !xml });
     }
     /* Karar yoksa değişik iş dosyasının mahkemesi ve esas numarası tevzi formundadır */
-    if (sr.adim === 3 && sr.evrak.tevzi) {
+    if (sr.adim === 3 && sr.evrak.tevzi && !okunan.tevzi) {
       const xml = await oku(sr.evrak.tevzi);
       if (xml) okunan.tevzi = KH.tevziCoz(xml); else s.notlar.push('Tevzi formu okunamadı');
     }
