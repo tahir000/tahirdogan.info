@@ -100,9 +100,10 @@ footer { padding-bottom: 30px; color: var(--soluk); font-size: 13px; }
 <p>Talimat dairesi dosyayı açmış ama ana dosyaya henüz evrak göndermemişse talimat numarası evrak listesinde görünmez. Liste sorgulandıktan sonra <strong>Talimatı isimle ara</strong> düğmesi, değişik iş kararı olan dosyalarda şunu yapar:</p>
 <ol>
 <li>Ana dosyanın taraf bilgisinden borçlunun adını ve soyadını alır (borçlu kurumsa atlar).</li>
-<li>UYAP'ın Dosya Sorgulama ekranındaki <strong>Kişi ile Ara</strong> sorgusunu bütün icra dairelerinde çalıştırır; türü "Talimat Dosyası" olan sonuçlar adaydır.</li>
-<li>Aynı borçlunun başka dosyaları ve adaşları da çıkabildiği için her adayın evrak listesine bakar: içinde bu ana dosyanın dairesinden ve numarasından gelen talimat yazısı varsa talimat dosyası bu dosyaya aittir.</li>
+<li>UYAP'ın Dosya Sorgulama ekranındaki <strong>Kişi ile Ara</strong> sorgusunu bütün icra dairelerinde çalıştırır: önce açık dosyalarda, bu dosyanın talimatı çıkmazsa kapalı dosyalarda. Türü "Talimat Dosyası" olan sonuçlar ile başka dairede, ana dosyadaki ilk talepten sonra açılmış dosyalar adaydır.</li>
+<li>Aynı borçlunun başka dosyaları ve adaşları da çıkabildiği için her adayın içeriğine (evrak listesine) bakar: içinde bu ana dosyanın dairesinden ve numarasından gelen talimat yazısı varsa talimat dosyası bu dosyaya aittir.</li>
 <li>Doğrulanan talimat dairesi ve dosya numarası Excel'in talimat sütunlarına eklenir. Dosya 6. aşamadaysa aşama 7 olarak yazılır.</li>
+<li>Adayın içinde başka bir ana dosyadan gelen talimat yazısı varsa bu, borçlunun öteki dosyasının talimatıdır: bu dosyanın talimatı sayılmaz, "Borçlunun Diğer Talimat Dosyaları" sütununa hangi dosyadan geldiğiyle birlikte yazılır.</li>
 </ol>
 <p class="not">Sıra: önce talimatı yazılmış dosyalar (6 ve 7. aşama), sonra 5 ve 4. aşamadakiler. Dosya başına üç ila beş istek gider. Borçlunun adı tarayıcıda saklanmaz ve Excel'e yazılmaz.</p>
 </section>
@@ -121,6 +122,7 @@ footer { padding-bottom: 30px; color: var(--soluk); font-size: 13px; }
 <tr><td>Talimat Yazılan Yer</td><td>Talimat dosyası henüz açılmamışsa talimat yazısının muhatabı.</td></tr>
 <tr><td>1 – 7 tarihleri</td><td>Sürecin her adımındaki evrakın tarihi.</td></tr>
 <tr><td>İsimle Arama</td><td>İkinci geçişin sonucu: yeni talimat dosyası bulundu, evrak listesindeki doğrulandı, talimat dosyası çıkmadı ya da çıkanlar başka dosyaya ait. Aranmamış dosyada boştur.</td></tr>
+<tr><td>Borçlunun Diğer Talimat Dosyaları</td><td>Aynı borçlunun başka bir ana dosyasından açılmış talimat dosyaları: talimat dairesi, numarası ve hangi ana dosyadan geldiği.</td></tr>
 <tr><td>Not</td><td>Elle bakılması gereken durumlar ve kapalı dosya uyarısı.</td></tr>
 </table>
 </div>
@@ -149,7 +151,7 @@ footer { padding-bottom: 30px; color: var(--soluk); font-size: 13px; }
 
 </main>
 <footer class="kap">
-<p>Sürüm 1.1.0 · Kasım 2026 · <a href="test/test.html">Testler</a></p>
+<p>Sürüm 1.1.1 · Kasım 2026 · <a href="test/test.html">Testler</a></p>
 </footer>
 </body>
 </html>

@@ -34,7 +34,7 @@
   'use strict';
 
   const KH = {};
-  const SURUM = '1.1.0';
+  const SURUM = '1.1.1';
 
   /* ---------- Metin ve tarih ---------- */
   function metin(v) { return v === null || v === undefined ? '' : String(v).replace(/\s+/g, ' ').trim(); }
@@ -310,8 +310,8 @@
   };
 
   KH.BASLIKLAR = ['İcra Dairesi', 'Ana Dosya No', 'Listedeki Bilgi', 'Aşama', 'Durum', 'D.İş Mahkemesi', 'D.İş Esas No', 'D.İş Karar No', 'Karar Tarihi', 'Karar Sonucu',
-    'Talimat Dairesi', 'Talimat Dosya No', 'Talimat Yazılan Yer', '1 Talep', '2 Mahkemeye Yazı', '3 Tevzi', '4 Değişik İş Kararı', '5 Karar Sonrası Talep', '6 Talimat Yazısı', '7 Talimat Dosyası', 'İsimle Arama', 'Not'];
-  const GENISLIK = [44, 14, 28, 30, 52, 38, 14, 14, 13, 16, 38, 16, 34, 12, 12, 12, 12, 12, 12, 12, 44, 60];
+    'Talimat Dairesi', 'Talimat Dosya No', 'Talimat Yazılan Yer', '1 Talep', '2 Mahkemeye Yazı', '3 Tevzi', '4 Değişik İş Kararı', '5 Karar Sonrası Talep', '6 Talimat Yazısı', '7 Talimat Dosyası', 'İsimle Arama', 'Borçlunun Diğer Talimat Dosyaları', 'Not'];
+  const GENISLIK = [44, 14, 28, 30, 52, 38, 14, 14, 13, 16, 38, 16, 34, 12, 12, 12, 12, 12, 12, 12, 44, 60, 60];
 
   /* Dosyanın talimat dosyaları: evrak listesindekiler + isimle aramada bulunup bu dosyaya ait olduğu doğrulananlar */
   KH.talimatBirlesik = function (s) {
@@ -326,8 +326,8 @@
   KH.satir = function (k, s) {
     const bos = function (n) { const a = []; for (let i = 0; i < n; i++) a.push(''); return a; };
     const bas = [k.daire, k.no, k.bilgi || ''];
-    if (!s) return bas.concat(bos(18), ['Sorgulanmadı']);
-    if (!s.ozet) return bas.concat([s.durum || '', s.mesaj || ''], bos(16), [(s.notlar || []).join('; ')]);
+    if (!s) return bas.concat(bos(19), ['Sorgulanmadı']);
+    if (!s.ozet) return bas.concat([s.durum || '', s.mesaj || ''], bos(17), [(s.notlar || []).join('; ')]);
     const o = s.ozet, im = s.isim || null, cok = function (l, f) { return l.map(f).filter(function (x, i) { return x || l.length > 1; }).join('\n'); };
     const talimatlar = KH.talimatBirlesik(s), tarihler = o.tarihler.slice();
     let asama = o.adim + ' - ' + o.adimAdi, siradaki = o.siradaki;
@@ -342,7 +342,7 @@
       cok(o.disler, function (d) { return d.mahkeme; }), cok(o.disler, function (d) { return d.esasNo ? d.esasNo + ' D.İş' : ''; }),
       cok(o.disler, function (d) { return d.kararNo; }), cok(o.disler, function (d) { return d.kararTarihi; }), cok(o.disler, function (d) { return d.sonuc; }),
       cok(talimatlar, function (t) { return t.daire; }), cok(talimatlar, function (t) { return t.dosyaNo; }), o.talimatYeri],
-      tarihler, [im ? im.durum + (im.notlar && im.notlar.length ? ' (' + im.notlar.join('; ') + ')' : '') : '',
+      tarihler, [im ? im.durum + (im.notlar && im.notlar.length ? ' (' + im.notlar.join('; ') + ')' : '') : '', KH.digerMetni(im),
         o.notlar.concat(s.dosyaDurum && !/^AÇIK$/.test(buyuk(s.dosyaDurum)) ? ['Dosya durumu: ' + s.dosyaDurum] : []).join('; ')]);
   };
 
@@ -747,22 +747,29 @@
   KH.kararVar = function (s) {
     return !!(s && s.ozet && (s.ozet.disler || []).some(function (d) { return d.kararNo || d.evrakTarihi; }));
   };
-  /* İsimle aranacak kayıtlar: kararı olan dosyalar, bir kez; önce talimatı yazılmış olanlar (6, 7), sonra 5 ve 4. adımdakiler */
+  /*
+   * İsimle aranacak kayıtlar: kararı olan dosyalar, bir kez. Sıra: önce çıkan talimatı başka dosyaya ait görünenler,
+   * sonra talimatı yazılmış olanlar (6, 7), sonra 5 ve 4. adımdakiler. "atla" açıksa talimatı bulunmuş ya da güncel
+   * yöntemle (v2: kapalı dosyalar ve içerik denetimi dahil) aranmış dosyalar yeniden aranmaz.
+   */
   KH.isimListesi = function (kayitlar, sonuclar, atla) {
     const gorulen = {}, oncelik = { 6: 0, 7: 1, 5: 2, 4: 3 };
+    const sira = function (s) {
+      if (s.isim && /başka dosya|ait olan yok/.test(s.isim.durum)) return -1;
+      const p = oncelik[s.ozet.adim];
+      return p === undefined ? 9 : p;
+    };
     return kayitlar.map(function (x, i) { return { x: x, sira: i + 1 }; }).filter(function (y) {
       const s = sonuclar[y.x.anahtar];
-      if (gorulen[y.x.anahtar] || !KH.kararVar(s) || (atla && s.isim)) return false;
+      if (gorulen[y.x.anahtar] || !KH.kararVar(s)) return false;
+      if (atla && s.isim && (s.isim.v >= 2 || (s.isim.talimatlar || []).length)) return false;
       gorulen[y.x.anahtar] = true;
       return true;
-    }).sort(function (a, b) {
-      const pa = oncelik[sonuclar[a.x.anahtar].ozet.adim], pb = oncelik[sonuclar[b.x.anahtar].ozet.adim];
-      return (pa === undefined ? 9 : pa) - (pb === undefined ? 9 : pb) || a.sira - b.sira;
-    });
+    }).sort(function (a, b) { return sira(sonuclar[a.x.anahtar]) - sira(sonuclar[b.x.anahtar]) || a.sira - b.sira; });
   };
 
   KH.talimatAra = async function (bag, k, s) {
-    const r = { durum: '', talimatlar: [], aday: 0, borclu: 0, notlar: [] };
+    const r = { v: 2, durum: '', talimatlar: [], diger: [], aday: 0, borclu: 0, notlar: [] };
     const d = await bag.dosyaBul(k.daire, k.no);
     if (!d) { r.durum = 'Ana dosya bulunamadı'; return r; }
     const taraflar = await bag.taraflar(d);
@@ -772,30 +779,40 @@
     if (!kisiler.length) { r.durum = borclular.length ? 'Borçlu kişi değil; kişi adıyla aranamadı' : 'Taraf bilgisinde borçlu yok'; return r; }
     if (kisiler.length > 3) r.notlar.push(kisiler.length + ' borçludan ilk 3\'ü arandı');
     const bilinen = ((s && s.ozet && s.ozet.talimatlar) || []).map(function (t) { return icraDuz(t.daire) + '|' + t.dosyaNo; });
+    /* Türü talimat olmayan dosyalardan yalnız ana dosyadaki ilk talepten sonra, başka dairede açılmış olanların içeriğine bakılır */
+    const esik = gunSayi(s && s.ozet && s.ozet.tarihler ? s.ozet.tarihler[0] : '');
     const bakilan = {};
-    let anaGorundu = false, fazla = false, baskasi = 0;
-    /* Bir arama sonucundaki talimat dosyalarını doğrular. Kimlikler son aramaya ait olduğu için sıradaki aramadan önce yapılır */
+    const anaMi = function (x) { return (dosyaNo(x.dosyaNo) || {}).no === d.dosyaNo && String(x.birimId) === String(d.birimId); };
+    let anaGorundu = false, fazla = false;
+    /*
+     * Bir arama sonucundaki adayların içeriğine bakar. Aday: türü "Talimat Dosyası" olanlar ile başka dairede sonradan
+     * açılmış dosyalar. İçeriğinde bu ana dosyadan gelen talimat yazısı varsa bu dosyanın talimatıdır; başka bir dosyadan
+     * gelen talimat yazısı varsa borçlunun öteki dosyasının talimatıdır; talimat yazısı yoksa talimat dosyası değildir.
+     * Kimlikler son aramaya ait olduğu için sıradaki aramadan önce yapılır.
+     */
     const dogrula = async function (liste) {
-      const adaylar = liste.filter(function (x) { return /TALİMAT/.test(buyuk(x.dosyaTur)) && dosyaNo(x.dosyaNo); })
-        .filter(function (x) { const a = x.birimId + '|' + dosyaNo(x.dosyaNo).no; if (bakilan[a]) return false; bakilan[a] = true; return true; });
+      const adaylar = liste.filter(function (x) {
+        if (!dosyaNo(x.dosyaNo) || anaMi(x)) return false;
+        const tur = buyuk(x.dosyaTur);
+        if (/TALİMAT/.test(tur)) return true;
+        return !/MTS/.test(tur) && String(x.birimId) !== String(d.birimId) && esik > 0 && gunSayi(aramaTarihi(x.dosyaAcilisTarihi)) >= esik;
+      }).filter(function (x) { const a = x.birimId + '|' + dosyaNo(x.dosyaNo).no; if (bakilan[a]) return false; bakilan[a] = true; return true; });
       r.aday += adaylar.length;
       if (adaylar.length > 8) fazla = true;
       for (const x of adaylar.slice(0, 8)) {
-        const no = dosyaNo(x.dosyaNo).no, daire = metin(x.birimAdi);
+        const no = dosyaNo(x.dosyaNo).no, daire = metin(x.birimAdi), talimatTuru = /TALİMAT/.test(buyuk(x.dosyaTur));
         const kayit = { daire: daire, dosyaNo: no, acilis: aramaTarihi(x.dosyaAcilisTarihi), dosyaDurum: metin(x.dosyaDurum), yeni: false };
         if (bilinen.indexOf(icraDuz(daire) + '|' + no) !== -1) { r.talimatlar.push(kayit); continue; }
-        let ev;
+        let ev = null;
         try { ev = await bag.evraklar({ dosyaId: x.dosyaId, dosyaNo: no, birimId: String(x.birimId), birimAdi: daire, birimTuru2: '1101', dosyaDurum: kayit.dosyaDurum || 'Açık' }); }
-        catch (hata) {
-          if (hata && DURDURAN.indexOf(hata.kod) !== -1 && hata.message !== 'Evrak listesi alınamadı') throw hata;
-          r.notlar.push(daire + ' ' + no + ' talimat dosyasının evrak listesi okunamadı; elle bakın');
-          continue;
-        }
-        if (ev.some(function (e) { return (dosyaNo(e.gonderenDosyaNo) || {}).no === d.dosyaNo && icraDuz(e.gonderen) === icraDuz(d.birimAdi); })) { kayit.yeni = true; r.talimatlar.push(kayit); }
-        else baskasi++;
+        catch (hata) { if (hata && DURDURAN.indexOf(hata.kod) !== -1 && hata.message !== 'Evrak listesi alınamadı') throw hata; }
+        if (!ev || !ev.length) { if (talimatTuru) r.notlar.push(daire + ' ' + no + ' talimat dosyasının evrak listesi okunamadı; hangi dosyaya ait olduğu doğrulanamadı'); continue; }
+        if (ev.some(function (e) { return (dosyaNo(e.gonderenDosyaNo) || {}).no === d.dosyaNo && icraDuz(e.gonderen) === icraDuz(d.birimAdi); })) { kayit.yeni = true; r.talimatlar.push(kayit); continue; }
+        const yazi = ev.filter(function (e) { return /TALİMAT\s+GÖNDERME/.test(buyuk(e.tur)) && dosyaNo(e.gonderenDosyaNo); }).sort(function (a, b) { return gunSayi(a.tarih) - gunSayi(b.tarih); })[0];
+        if (yazi) r.diger.push({ daire: daire, dosyaNo: no, acilis: kayit.acilis, dosyaDurum: kayit.dosyaDurum, anaDaire: metin(yazi.gonderen), anaNo: dosyaNo(yazi.gonderenDosyaNo).no });
+        else if (talimatTuru) r.notlar.push(daire + ' ' + no + ' talimat dosyasında talimat yazısı görünmüyor; hangi dosyaya ait olduğu doğrulanamadı');
       }
     };
-    const anaMi = function (x) { return (dosyaNo(x.dosyaNo) || {}).no === d.dosyaNo && String(x.birimId) === String(d.birimId); };
     let tutan = null;
     for (const t of kisiler.slice(0, 3)) {
       let liste = null, ayrim = null;
@@ -807,22 +824,27 @@
       if (!tutan) tutan = ayrim;
       await dogrula(liste || []);
     }
-    /* Talimat yazıldığı halde açık dosyalarda çıkmadıysa talimat dosyası kapanmış olabilir */
-    if (!r.talimatlar.length && s && s.ozet && s.ozet.adim >= 6 && tutan) await dogrula(await bag.isimleAra(tutan.adi, tutan.soyadi, 1));
+    /* Açık dosyalarda bu dosyanın talimatı çıkmadıysa kapalı dosyalara da bakılır (talimat iade edilip kapatılmış olabilir) */
+    if (!r.talimatlar.length && tutan) await dogrula(await bag.isimleAra(tutan.adi, tutan.soyadi, 1));
     if (!anaGorundu) r.notlar.push('İsimle aramada ana dosya çıkmadı; ad ve soyad ayrımı tutmamış olabilir');
-    if (fazla) r.notlar.push('İsimle çok sayıda talimat dosyası çıktı; ilk 8\'i doğrulandı');
+    if (fazla) r.notlar.push('İsimle çok sayıda aday dosya çıktı; ilk 8\'inin içeriğine bakıldı');
     const yeni = r.talimatlar.filter(function (t) { return t.yeni; }).length;
     if (yeni) r.durum = 'Yeni talimat dosyası bulundu' + (r.talimatlar.length > yeni ? '; evrak listesindeki de doğrulandı' : '');
     else if (r.talimatlar.length) r.durum = 'Evrak listesindeki talimat dosyası doğrulandı';
-    else if (baskasi) r.durum = 'İsimle ' + baskasi + ' talimat dosyası çıktı; bu dosyaya ait olan yok';
-    else r.durum = 'Talimat dosyası çıkmadı';
-    if (baskasi && r.talimatlar.length) r.notlar.push('aynı isimle başka dosyalara ait ' + baskasi + ' talimat dosyası daha var');
+    else if (r.diger.length) r.durum = 'Bu dosyaya ait talimat dosyası yok; borçlunun başka dosyasına ait ' + r.diger.length + ' talimat dosyası var';
+    else r.durum = 'Talimat dosyası çıkmadı (açık ve kapalı dosyalarda)';
     return r;
+  };
+
+  /* Borçlunun başka dosyasına ait talimat dosyalarının Excel hücresi: "Daire No (Ana Daire Ana No dosyasından)" */
+  KH.digerMetni = function (im) {
+    return ((im && im.diger) || []).map(function (t) { return t.daire + ' ' + t.dosyaNo + ' (' + t.anaDaire + ' ' + t.anaNo + ' dosyasından)'; }).join('\n');
   };
 
   /* Panelde isimle arama sonucunun tek satırlık özeti */
   KH.isimOzet = function (im) {
-    return im.durum + (im.talimatlar.length ? ' · ' + im.talimatlar.map(function (t) { return t.daire + ' ' + t.dosyaNo + (t.acilis ? ' (' + t.acilis + ')' : ''); }).join(' · ') : '');
+    return im.durum + (im.talimatlar.length ? ' · ' + im.talimatlar.map(function (t) { return t.daire + ' ' + t.dosyaNo + (t.acilis ? ' (' + t.acilis + ')' : ''); }).join(' · ') : '')
+      + ((im.diger || []).length ? ' · ' + KH.digerMetni(im).replace(/\n/g, ' · ') : '');
   };
 
   /* Sorgulanacak kayıtlar: seçilen aralık; kayıtlı sonucu olanlar (istenirse) atlanır, listede iki kez geçen dosya bir kez sorgulanır */
