@@ -56,6 +56,13 @@
   esit('Tevzi formu mahkeme yazısı yoksa sürece sayılmaz (başka davanın formu olabilir)', KH.surec([E.talep, E.tevzi]).adim, 1);
   esit('Karardan önceki eski talimat yeni süreci ilerletmez', KH.surec([{ tur: 'İcra Dairesi Talimat Gönderme Yazısı', tarih: '01/01/2030' }, E.talep, E.yazi, E.tevzi, E.karar]).adim, 4);
 
+  /* Son karardan sonra gelen tevzi formu: mahkeme yazısı görünmeden başlayan yeni tur */
+  const gecTevzi = { tur: 'Hukuk Mahkemesi Tevzi Formu', aciklama: 'Tevzi Formu', tarih: '01/04/2030', gonderen: 'Örnek Hukuk Mahkemeleri Tevzi Bürosu', gonderenDosyaNo: '2030/9000' };
+  const aday = KH.surec(zincir.concat([gecTevzi]));
+  const yeniTur = KH.surec(zincir.concat([gecTevzi]), '', { yeniTur: aday.sonrakiTevzi.gun });
+  esit('Son karardan sonraki tevzi formu aday olarak işaretlenir; doğrulanmadıkça aşama değişmez', [aday.adim, aday.sonrakiTevzi.tarih, tam.sonrakiTevzi, KH.surec(zincir.concat([gecTevzi, { tur: 'İcra Mahkemesine Gönderilen Yazılar', tarih: '02/04/2030' }])).sonrakiTevzi], [7, '01/04/2030', null, null]);
+  esit('Tevzi konut haczine aitse yeni tur 3. adımdadır, eski karar ve talimat listede kalır', [yeniTur.adim, yeniTur.evrak.mahkemeYazisi, yeniTur.evrak.karar, yeniTur.kararlar.length, yeniTur.talimatDosyalari.length, /önceki/.test(yeniTur.notlar.join(' '))], [3, null, null, 1, 1, true]);
+
   /* Tensip: talebin kabulü ya da reddi */
   const bekle = KH.surec([E.talep]);
   const kabul = KH.surec([E.talep, tensip('11/01/2030', 'Karar/Kabul', hEk)]);
@@ -180,6 +187,13 @@
   const s1 = await KH.dosyaSorgula(t1.bag, k0);
   esit('Uçtan uca (tam süreç): aşama, D.İş, talimat', [s1.ozet.adim, s1.ozet.disler[0].esasNo, s1.ozet.disler[0].kararNo, s1.ozet.disler[0].sonuc, s1.ozet.talimatlar[0].dosyaNo, s1.ozet.notlar], [7, '2030/77', '2030/91', 'ONAYLANDI', '2030/321', []]);
   esit('Uçtan uca: yalnız karar okunur (arama, liste ve tek evrak)', t1.gunluk.filter(function (u) { return /view_document/.test(u); }).length, 1);
+
+  belgeler.t9 = await udf('TEVZİ FORMU', '<data><ilIlceMahkemeAdi>Örnek 9. İcra Hukuk Mahkemesi</ilIlceMahkemeAdi><kayitNo>2030/900</kayitNo><davaTuru>İcra Müdürünün Konutta Haciz Kararının Onaylanması (İİK M.79/a)</davaTuru></data>');
+  belgeler.t8 = await udf('TEVZİ FORMU', '<data><ilIlceMahkemeAdi>Örnek 2. Asliye Ticaret Mahkemesi</ilIlceMahkemeAdi><kayitNo>2030/400</kayitNo><davaTuru>İtirazın İptali</davaTuru></data>');
+  const sY = await KH.dosyaSorgula(taklit(tumListe.concat([uyapEvrak(gecTevzi, 't9')])).bag, k0);
+  esit('Uçtan uca: son karardan sonra konut haczi tevzi edilmişse yeni D.İş dosyası en üstte, karar bekleniyor', [sY.ozet.adim, sY.ozet.disler.map(function (d) { return d.esasNo + ' ' + d.sonuc; }), /yeni bir konut haczi dosyası tevzi edilmiş \(01\.04\.2030\)/.test(sY.ozet.notlar.join(' '))], [3, ['2030/900 KARAR BEKLENİYOR', '2030/77 ONAYLANDI'], true]);
+  const sB = await KH.dosyaSorgula(taklit(tumListe.concat([uyapEvrak(gecTevzi, 't8')])).bag, k0);
+  esit('Uçtan uca: sonradan gelen tevzi başka bir davaya aitse aşama değişmez', [sB.ozet.adim, sB.ozet.disler.length, sB.ozet.notlar], [7, 1, []]);
 
   const t2 = taklit(tumListe.slice(0, 4));
   const s2 = await KH.dosyaSorgula(t2.bag, k0);
