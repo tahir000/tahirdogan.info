@@ -22,13 +22,16 @@
  *   4  "Değişik İş Kararı"  (gönderen: icra hukuk mahkemesi; gönderen dosya no: D.İş esas numarası)
  *   5  karardan sonra yeniden "Avukat Portal Haciz Talebi" ("Taşınır Haciz Talimatı Talebi")
  *   6  "İcra Dairesi Talimat Gönderme Yazısı"
- *   7  "… Gelen Talimat Dosyası Evrakı"  (gönderen: talimat dairesi; gönderen dosya no: talimat dosya numarası)
+ *   7  talimat dairesinden gelen evrak: "… Gelen Talimat Dosyası Evrakı", "Genel Talimat Evrakı", "Genel Talimat Cevabı Evrakı"
+ *      (gönderen: talimat dairesi; gönderen dosya no: talimat dosya numarası)
+ * Talebin kabul ya da reddi "Tensip zaptı" evrakından okunur (açıklama "Karar/Kabul" | "Karar/Red"; ek türünde talebin adı).
+ * Bazı daireler talimatı mahkeme aşaması olmadan doğrudan yazar; o dosyalarda 2-4. adımlar yoktur.
  */
 (function (kok) {
   'use strict';
 
   const KH = {};
-  const SURUM = '1.0.0';
+  const SURUM = '1.0.1';
 
   /* ---------- Metin ve tarih ---------- */
   function metin(v) { return v === null || v === undefined ? '' : String(v).replace(/\s+/g, ' ').trim(); }
@@ -105,6 +108,8 @@
     if (/İCRA\s+MAHKEMESİNE\s+GÖNDERİLEN/.test(t)) return 'mahkemeYazisi';
     if (/TALİMAT\s+GÖNDERME\s+YAZISI/.test(t)) return 'talimatYazisi';
     if (/HACİZ\s+TALEBİ/.test(t) && /TAŞINIR\s+HACİZ/.test(a)) return 'talep';
+    /* Talebin tensibi: "Tensip zaptı", açıklaması "Karar/Kabul" ya da "Karar/Red", eki "Kararla İlişkili Tensip - Genel Haciz Talebi-Taşınır Haciz Talebi, " */
+    if (/TENSİP/.test(t) && /TAŞINIR\s+HACİZ/.test(buyuk(e.ekTurleri))) return 'tensip';
     if (/TALİMAT/.test(t) && /İCRA\s+(DAİRESİ|MÜDÜRLÜĞÜ)/.test(g) && dosyaNo(e.gonderenDosyaNo) && (!bizimDaire || icraDuz(g) !== icraDuz(bizimDaire))) return 'talimatDosyasi';
     return null;
   };
@@ -124,21 +129,42 @@
     const r = { adim: 0, evrak: {}, kararlar: al('karar'), tevziler: al('tevzi'), talimatDosyalari: al('talimatDosyasi'), talimatYazilari: al('talimatYazisi'), talepler: al('talep'), notlar: [] };
     const M = son(al('mahkemeYazisi'));
     const bas = M ? M.gun : 0;
-    /* Turu başlatan talep: mahkeme yazısından önceki son taşınır haciz talebi (mahkeme yazısı yoksa ilk talep) */
-    const T1 = M ? son(r.talepler.filter(function (e) { return e.gun <= M.gun; })) : r.talepler[0] || null;
-    const V = ilkSonra(r.tevziler, bas);
+    /* Tevzi formu yalnız mahkeme yazısından sonra geldiyse bu sürece aittir (dosyada başka davaların tevzi formu da olabilir) */
+    const V = M ? ilkSonra(r.tevziler, bas) : null;
     const K = M ? ilkSonra(r.kararlar, bas) : son(r.kararlar);
-    const kararGun = K ? K.gun : null;
-    const T2 = K ? r.talepler.find(function (e) { return e.gun >= kararGun && e !== T1; }) || null : null;
-    /* Talimat yazısı ve talimat dosyası yalnız karardan sonra geldiyse bu sürece aittir */
-    const G = K ? ilkSonra(r.talimatYazilari, kararGun) : null;
-    const C = K ? ilkSonra(r.talimatDosyalari, G ? G.gun : kararGun) : null;
+    /*
+     * Talimat yazısı ve talimat dosyası, sürecin mahkeme aşamasından (karar, o yoksa mahkeme yazısı) sonra geldiyse
+     * bu sürece aittir. Mahkeme aşaması hiç yoksa talimat doğrudan yazılmıştır (bazı daireler konut tespitini
+     * talimat dairesine bırakır): süreç yine 6. ya da 7. adımdadır, karar sütunları boş kalır.
+     */
+    const esik = K ? K.gun : bas;
+    const G = ilkSonra(r.talimatYazilari, esik);
+    const C = ilkSonra(r.talimatDosyalari, G ? G.gun : esik);
+    /* Turu başlatan talep: mahkeme yazısından (yoksa talimat yazısından) önceki son taşınır haciz talebi; ikisi de yoksa son talep */
+    const once = function (gun) { return son(r.talepler.filter(function (e) { return e.gun <= gun; })); };
+    const T1 = (M ? once(M.gun) : G ? once(G.gun) : son(r.talepler)) || r.talepler[0] || null;
+    const T2 = K ? r.talepler.find(function (e) { return e.gun >= K.gun && e !== T1; }) || null : null;
     r.evrak = { talep: T1, mahkemeYazisi: M, tevzi: V, karar: K, kararSonrasiTalep: T2, talimatYazisi: G, talimatDosyasi: C };
-    r.adim = C ? 7 : G ? 6 : T2 ? 5 : K ? 4 : V ? 3 : M ? 2 : (T1 || r.talepler.length) ? 1 : 0;
-    if (!r.evrak.talep && r.talepler.length) r.evrak.talep = r.talepler[0];
-    if (r.adim < 4 && r.kararlar.length) r.notlar.push('Dosyada önceki bir konut haczi sürecine ait değişik iş kararı var; yeni süreç ' + r.adim + '. adımda');
+    r.adim = C ? 7 : G ? 6 : T2 ? 5 : K ? 4 : V ? 3 : M ? 2 : r.talepler.length ? 1 : 0;
+    /* Bekleyen talebin (1. ve 5. adım) tensibi: aynı tür talebe ait, talepten sonraki ilk tensip zaptı */
+    const bekleyen = r.adim === 1 ? T1 : r.adim === 5 ? T2 : null;
+    if (bekleyen) {
+      const talimatMi = function (v) { return /TAŞINIR\s+HACİZ\s+TALİMAT/.test(buyuk(v)); };
+      const tensipler = al('tensip').filter(function (e) { return e.gun >= bekleyen.gun; });
+      const tn = tensipler.find(function (e) { return talimatMi(e.ekTurleri) === talimatMi(bekleyen.aciklama); }) || tensipler[0] || null;
+      const a = tn ? buyuk(tn.aciklama) : '';
+      const sonuc = !tn ? '' : /RED/.test(a) && !/KABUL/.test(a) ? 'RED' : /KABUL/.test(a) ? 'KABUL' : '';
+      r.tensip = tn ? { sonuc: sonuc, tarih: tarihDuz(tn.tarih) } : null;
+      if (sonuc === 'RED') {
+        r.adimAdi = r.adim === 1 ? 'Haciz talebi reddedildi' : 'Karar sonrası talep reddedildi';
+        r.siradaki = 'İcra dairesi talebi reddetmiş (' + r.tensip.tarih + ' tensip zaptı); gerekçeye bakıp yeniden talep atılmalı';
+      } else if (sonuc === 'KABUL') {
+        r.siradaki = 'Talep kabul edilmiş (' + r.tensip.tarih + '); icra dairesinin ' + (r.adim === 5 || talimatMi(bekleyen.aciklama) ? 'talimat yazması' : 'icra hukuk mahkemesine yazı yazması') + ' bekleniyor';
+      } else r.siradaki = 'İcra dairesinin talebi tensip etmesi bekleniyor';
+    }
+    if (!K && r.kararlar.length) r.notlar.push('Dosyadaki değişik iş kararı önceki bir konut haczi sürecine ait; yeni süreç ' + r.adim + '. adımda');
     if (r.kararlar.length > 1) r.notlar.push('Dosyada ' + r.kararlar.length + ' değişik iş kararı var');
-    if (!K && (r.talimatYazilari.length || r.talimatDosyalari.length)) r.notlar.push('Dosyada değişik iş kararı olmadan yazılmış talimat var');
+    if (!K && (G || C)) r.notlar.push(M ? 'Talimat, son mahkeme yazısının kararı dosyaya gelmeden yazılmış' : 'Talimat, değişik iş kararı alınmadan doğrudan yazılmış');
     /* Son talimat yazısından da sonra atılmış, karşılığı henüz görünmeyen talep (talimatın yenilenmesi ya da yeni adres) */
     const sonTalep = son(r.talepler), sonYazi = son(r.talimatYazilari);
     if (r.adim >= 6 && sonTalep && sonYazi && sonTalep.gun > sonYazi.gun) r.notlar.push('Son talimat yazısından sonra yeni taşınır haciz talebi var (' + tarihDuz(sonTalep.tarih) + '); yeni bir konut haczi talebiyse o süreç 1. adımdadır');
@@ -241,7 +267,7 @@
   KH.ozetle = function (surec, okunan) {
     okunan = okunan || {};
     const ev = surec.evrak, t = function (e) { return e ? tarihDuz(e.tarih) : ''; };
-    const o = { adim: surec.adim, adimAdi: KH.ADIMLAR[surec.adim], siradaki: SIRADAKI[surec.adim], notlar: surec.notlar.slice() };
+    const o = { adim: surec.adim, adimAdi: surec.adimAdi || KH.ADIMLAR[surec.adim], siradaki: surec.siradaki || SIRADAKI[surec.adim], notlar: surec.notlar.slice() };
     const disler = (okunan.kararlar || []).map(function (k) {
       const c = k.coz || {}, e = k.evrak || {};
       const d = { mahkeme: metin(e.gonderen) || c.mahkeme || '', esasNo: c.esasNo || (dosyaNo(e.gonderenDosyaNo) || {}).no || '', kararNo: c.kararNo || '', kararTarihi: c.kararTarihi || '', sonuc: c.sonuc || '', evrakTarihi: tarihDuz(e.tarih) };
@@ -271,21 +297,22 @@
     return o;
   };
 
-  KH.BASLIKLAR = ['İcra Dairesi', 'Ana Dosya No', 'Aşama', 'Durum', 'D.İş Mahkemesi', 'D.İş Esas No', 'D.İş Karar No', 'Karar Tarihi', 'Karar Sonucu',
+  KH.BASLIKLAR = ['İcra Dairesi', 'Ana Dosya No', 'Listedeki Bilgi', 'Aşama', 'Durum', 'D.İş Mahkemesi', 'D.İş Esas No', 'D.İş Karar No', 'Karar Tarihi', 'Karar Sonucu',
     'Talimat Dairesi', 'Talimat Dosya No', 'Talimat Yazılan Yer', '1 Talep', '2 Mahkemeye Yazı', '3 Tevzi', '4 Değişik İş Kararı', '5 Karar Sonrası Talep', '6 Talimat Yazısı', '7 Talimat Dosyası', 'Not'];
-  const GENISLIK = [44, 14, 30, 52, 38, 14, 14, 13, 16, 38, 16, 34, 12, 12, 12, 12, 12, 12, 12, 60];
+  const GENISLIK = [44, 14, 28, 30, 52, 38, 14, 14, 13, 16, 38, 16, 34, 12, 12, 12, 12, 12, 12, 12, 60];
 
-  /* Bir kaydın Excel satırı. s: dosyaSorgula sonucu (ya da hata/atlama) */
+  /* Bir kaydın Excel satırı. s: dosyaSorgula sonucu (ya da hata/atlama). Liste sırası ve satır sayısı korunur */
   KH.satir = function (k, s) {
     const bos = function (n) { const a = []; for (let i = 0; i < n; i++) a.push(''); return a; };
-    if (!s) return [k.daire, k.no].concat(bos(17), ['Sorgulanmadı']);
-    if (!s.ozet) return [k.daire, k.no, s.durum || '', s.mesaj || ''].concat(bos(15), [(s.notlar || []).join('; ')]);
+    const bas = [k.daire, k.no, k.bilgi || ''];
+    if (!s) return bas.concat(bos(17), ['Sorgulanmadı']);
+    if (!s.ozet) return bas.concat([s.durum || '', s.mesaj || ''], bos(15), [(s.notlar || []).join('; ')]);
     const o = s.ozet, cok = function (l, f) { return l.map(f).filter(function (x, i) { return x || l.length > 1; }).join('\n'); };
-    return [k.daire, k.no, o.adim + ' - ' + o.adimAdi, o.siradaki,
+    return bas.concat([o.adim + ' - ' + o.adimAdi, o.siradaki,
       cok(o.disler, function (d) { return d.mahkeme; }), cok(o.disler, function (d) { return d.esasNo ? d.esasNo + ' D.İş' : ''; }),
       cok(o.disler, function (d) { return d.kararNo; }), cok(o.disler, function (d) { return d.kararTarihi; }), cok(o.disler, function (d) { return d.sonuc; }),
-      cok(o.talimatlar, function (t) { return t.daire; }), cok(o.talimatlar, function (t) { return t.dosyaNo; }), o.talimatYeri]
-      .concat(o.tarihler, [o.notlar.concat(s.dosyaDurum && !/^AÇIK$/.test(buyuk(s.dosyaDurum)) ? ['Dosya durumu: ' + s.dosyaDurum] : []).join('; ')]);
+      cok(o.talimatlar, function (t) { return t.daire; }), cok(o.talimatlar, function (t) { return t.dosyaNo; }), o.talimatYeri],
+      o.tarihler, [o.notlar.concat(s.dosyaDurum && !/^AÇIK$/.test(buyuk(s.dosyaDurum)) ? ['Dosya durumu: ' + s.dosyaDurum] : []).join('; ')]);
   };
 
   /* ---------- Zip (xlsx ve UDF) ---------- */
@@ -409,7 +436,10 @@
       const s = satirlar[r], n = dosyaNo(noMu(s[sNo]) ? s[sNo] : '');
       if (!n) return;
       const daire = metin(sDaire && daireMi(s[sDaire]) ? s[sDaire] : varsayilanDaire);
-      l.push({ satir: r, daire: daire, no: n.no, anahtar: icraDuz(daire) + '|' + n.no });
+      /* Satırdaki öteki hücreler (talep türü, borçlu, not…) sonuç Excel'ine "Listedeki Bilgi" olarak taşınır */
+      const bilgi = Object.keys(s).filter(function (h) { return h !== sNo && h !== sDaire && metin(s[h]) !== ''; })
+        .sort(function (a, b) { return sutunNo(a) - sutunNo(b); }).map(function (h) { return metin(s[h]).replace(/[,;]\s*$/, ''); }).join(' | ').slice(0, 300);
+      l.push({ satir: r, daire: daire, no: n.no, bilgi: bilgi, anahtar: icraDuz(daire) + '|' + n.no });
     });
     return { kayitlar: l, sutunlar: { no: sNo, daire: sDaire } };
   };
@@ -579,7 +609,8 @@
           if (grup.indexOf(d.dosyaNo + '(') !== 0) return;
           (Array.isArray(t[grup]) ? t[grup] : []).forEach(function (x) {
             hepsi.push({ evrakId: x.evrakId, tur: metin(x.tur), aciklama: metin(x.aciklama), tarih: metin(x.sistemeGonderildigiTarih) || metin(x.onaylandigiTarih),
-              gonderen: metin(x.gonderenYerKisi), gonderenDosyaNo: metin(x.gonderenDosyaNo) });
+              gonderen: metin(x.gonderenYerKisi), gonderenDosyaNo: metin(x.gonderenDosyaNo),
+              ekTurleri: (Array.isArray(x.ekEvrakListesi) ? x.ekEvrakListesi : []).map(function (y) { return metin(y && y.ekTuru); }).join(' ; ') });
           });
         });
         if (!(Number(v.pageTotal) > s)) break;
@@ -765,7 +796,7 @@
       calisiyor = false;
       $('.kh-basla').disabled = false; $('.kh-dur').disabled = true;
       if (durdu) durum(durdu, true);
-      else durum((durdur ? 'Durduruldu: ' : 'Bitti: ') + yapilan + ' dosya sorgulandı; toplam ' + kayitliSay() + '/' + kayitlar.length + ' dosyanın sonucu hazır. "Excel\'i indir" ile alın.');
+      else durum((durdur ? 'Durduruldu: ' : 'Bitti: ') + yapilan + ' dosya sorgulandı; listedeki ' + kayitlar.length + ' satırın ' + kayitliSay() + ' tanesinin sonucu hazır. "Excel\'i indir" ile alın.');
     };
   }
 

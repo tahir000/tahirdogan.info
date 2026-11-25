@@ -66,7 +66,7 @@ footer { padding-bottom: 30px; color: var(--soluk); font-size: 13px; }
 
 <section>
 <h2>Süreç ve aşamalar</h2>
-<p>Bot yalnız evrak listesine bakarak dosyanın geldiği adımı bulur. Aşama, dosyadaki en son "İcra Mahkemesine Gönderilen Yazılar" evrakıyla başlayan tura göre belirlenir.</p>
+<p>Bot yalnız evrak listesine bakarak dosyanın geldiği adımı bulur. Aşama, dosyadaki en son "İcra Mahkemesine Gönderilen Yazılar" evrakıyla başlayan tura göre belirlenir. Bazı daireler talimatı mahkeme aşaması olmadan doğrudan yazar; o dosyalar 2–4. aşamalardan geçmeden 6. ya da 7. aşamada görünür ve notta belirtilir.</p>
 <div class="tablo">
 <table>
 <tr><th>Aşama</th><th>Dosyada görülen evrak</th><th>Sıradaki iş</th></tr>
@@ -77,9 +77,10 @@ footer { padding-bottom: 30px; color: var(--soluk); font-size: 13px; }
 <tr><td>4</td><td>Değişik İş Kararı</td><td>Yeniden haciz talebi atılıp talimat yazılmasının istenmesi</td></tr>
 <tr><td>5</td><td>Karardan sonra yeni taşınır haciz (talimat) talebi</td><td>İcra dairesinin tensip edip talimat yazması</td></tr>
 <tr><td>6</td><td>İcra Dairesi Talimat Gönderme Yazısı</td><td>Talimat dairesinin dosyayı kaydedip numara vermesi</td></tr>
-<tr><td>7</td><td>Gelen Talimat Dosyası Evrakı</td><td>Talimat dosyası açılmış; numarası Excel'de</td></tr>
+<tr><td>7</td><td>Talimat dairesinden gelen evrak (Gelen Talimat Dosyası Evrakı, Genel Talimat Evrakı, Genel Talimat Cevabı Evrakı)</td><td>Talimat dosyası açılmış; numarası Excel'de</td></tr>
 </table>
 </div>
+<p class="not">1. ve 5. aşamada bot talebin tensip zaptına da bakar: talep kabul edilmişse "kabul edilmiş, yazı bekleniyor", icra dairesi reddetmişse aşama adı "Haciz talebi reddedildi" ya da "Karar sonrası talep reddedildi" olur, tensip yoksa "tensip bekleniyor" yazılır.</p>
 </section>
 
 <section>
@@ -98,7 +99,8 @@ footer { padding-bottom: 30px; color: var(--soluk); font-size: 13px; }
 <div class="tablo">
 <table>
 <tr><th>Sütun</th><th>Değer</th></tr>
-<tr><td>İcra Dairesi, Ana Dosya No</td><td>Listenizdeki dosya.</td></tr>
+<tr><td>İcra Dairesi, Ana Dosya No</td><td>Listenizdeki dosya. Satır sırası ve sayısı listenizle aynıdır; aynı dosya listede iki kez geçiyorsa iki satırda da aynı sonuç yazar.</td></tr>
+<tr><td>Listedeki Bilgi</td><td>Listenizde o satırdaki öteki hücreler (örneğin talep türü).</td></tr>
 <tr><td>Aşama, Durum</td><td>Aşamanın numarası ve adı; sıradaki iş.</td></tr>
 <tr><td>D.İş Mahkemesi, Esas No, Karar No</td><td>İcra hukuk mahkemesindeki değişik iş dosyası. Dosyada birden çok karar varsa her biri hücrede ayrı satırdadır.</td></tr>
 <tr><td>Karar Tarihi, Karar Sonucu</td><td>ONAYLANDI, KALDIRILDI (adres konut sayılmamış), REDDEDİLDİ ya da KARAR BEKLENİYOR (3. aşama).</td></tr>
@@ -113,7 +115,8 @@ footer { padding-bottom: 30px; color: var(--soluk); font-size: 13px; }
 <section>
 <h2>Elle bakılması gerekenler</h2>
 <ul>
-<li class="uyari">Bot talep evrakının içini okumaz. Dosyada konutla ilgisi olmayan bir taşınır haciz talebi varsa 1. aşama görünür; karar olmadan yazılmış talimat varsa notta belirtilir.</li>
+<li class="uyari">Bot talep evrakının içini okumaz. Dosyada konutla ilgisi olmayan bir taşınır haciz talebi varsa 1. aşama görünür.</li>
+<li>Talimat değişik iş kararı alınmadan yazılmışsa notta "doğrudan yazılmış" diye belirtilir; karar sütunları boş kalır, talimat dairesi ve talimat dosya numarası yine yazılır.</li>
 <li>Talimat yazıldıktan sonra yeni bir taşınır haciz talebi atılmışsa notta tarihiyle görünür: yeni bir adres için atıldıysa o süreç 1. aşamadadır.</li>
 <li>Karar okunamazsa mahkeme ve esas numarası evrak listesinden yazılır, karar no ve sonuç boş kalır.</li>
 <li>Dosya UYAP'ta giriş yapılan avukatın hesabıyla görünmüyorsa "Dosya bulunamadı" yazılır.</li>
@@ -132,7 +135,7 @@ footer { padding-bottom: 30px; color: var(--soluk); font-size: 13px; }
 
 </main>
 <footer class="kap">
-<p>Sürüm 1.0.0 · Kasım 2026 · <a href="test/test.html">Testler</a></p>
+<p>Sürüm 1.0.1 · Kasım 2026 · <a href="test/test.html">Testler</a></p>
 </footer>
 </body>
 </html>
